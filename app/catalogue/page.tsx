@@ -8,6 +8,7 @@ import {
   Sparkles,
   UsersRound,
 } from "lucide-react";
+import ProductCatalogue from "./ProductCatalogue";
 
 const navItems = ["About Us", "Partners", "Support", "Contact"];
 
@@ -125,6 +126,8 @@ export default function CataloguePage() {
           </div>
         </div>
       </section>
+
+      <ProductCatalogue />
     </main>
   );
 }

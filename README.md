@@ -31,4 +31,16 @@ Files inside `public` are referenced from the site root. For example,
 npm run build
 npm run lint
 ```
+
+## Deployment
+
+Vercel uses the standard Next.js commands:
+
+```bash
+npm run build
+npm run start
+```
+
+The optional Cloudflare/vinext workflow remains available through the
+`dev:cloudflare`, `build:cloudflare`, and `start:cloudflare` scripts.
 # woittola
