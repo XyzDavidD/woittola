@@ -1214,7 +1214,7 @@ summary {
 .catalogue-product-media img {
   z-index: 1;
   object-fit: contain;
-  transform: scale(1.34) translateY(-1%);
+  transform: scale(2.05) translateY(-1%);
 }
 
 .catalogue-bestseller {
@@ -1542,7 +1542,7 @@ summary {
 .product-gallery-main > img {
   z-index: 1;
   object-fit: contain;
-  transform: scale(1.43) translateY(-1%);
+  transform: scale(2.2) translateY(-1%);
 }
 
 .product-gallery-arrow {
@@ -1614,7 +1614,7 @@ summary {
 
 .product-gallery-thumbnails button img {
   object-fit: contain;
-  transform: scale(1.25);
+  transform: scale(2);
 }
 
 .product-detail-info {
