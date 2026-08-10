@@ -13,11 +13,12 @@ import {
   FileText,
   Headphones,
   Hospital,
-  Menu,
   ShieldCheck,
   UsersRound,
   Venus,
 } from "lucide-react";
+import SiteHeader from "./components/SiteHeader";
+import { partners } from "./data/partners";
 
 type Category = {
   title: string;
@@ -83,19 +84,6 @@ const categories: Category[] = [
   },
 ];
 
-const navItems = ["About Us", "Partners", "Support", "Contact"];
-
-const partners = [
-  { name: "GREINER", tagline: "PERFECT FOR YOU" },
-  { name: "PROMOTAL", tagline: "Furniture for Professionals" },
-  { name: "NOVAK-M", tagline: "MEDICAL EQUIPMENT" },
-  { name: "LA PASTILLA", tagline: "MEDICAL MOBILITY" },
-  { name: "AGA", tagline: "Sanitätsartikel" },
-  { name: "FAMED", tagline: "ŻYWIEC" },
-  { name: "MeGUARD", tagline: "PPE SOLUTIONS" },
-  { name: "OTOPRONT", tagline: "ENT SOLUTIONS" },
-];
-
 export const metadata = {
   title: "Professional Healthcare Furniture & Equipment | Woittola",
   description:
@@ -105,57 +93,7 @@ export const metadata = {
 export default function HomePage() {
   return (
     <main className="home-page">
-      <header className="site-header">
-        <div className="nav-shell">
-          <Link className="brand" href="/" aria-label="Woittola Healthcare home">
-            <Image
-              src="/images/logo.png"
-              alt="Woittola Healthcare"
-              width={296}
-              height={50}
-              priority
-              unoptimized
-            />
-          </Link>
-
-          <nav className="desktop-nav" aria-label="Main navigation">
-            <Link className="nav-link active" href="/">
-              Home
-            </Link>
-            <Link className="nav-link" href="/catalogue">
-              Products
-            </Link>
-            {navItems.map((item) => (
-              <Link
-                className="nav-link"
-                href={`/#${item.toLowerCase().replaceAll(" ", "-")}`}
-                key={item}
-              >
-                {item}
-              </Link>
-            ))}
-          </nav>
-
-          <Link className="header-quote" href="/#contact">
-            Request a Quote
-          </Link>
-
-          <details className="mobile-menu">
-            <summary aria-label="Open navigation menu">
-              <Menu aria-hidden="true" />
-            </summary>
-            <nav aria-label="Mobile navigation">
-              <Link href="/">Home</Link>
-              <Link href="/catalogue">Products</Link>
-              {navItems.map((item) => (
-                <Link href={`/#${item.toLowerCase().replaceAll(" ", "-")}`} key={item}>
-                  {item}
-                </Link>
-              ))}
-            </nav>
-          </details>
-        </div>
-      </header>
+      <SiteHeader activePage="home" />
 
       <section className="hero-section">
         <div className="hero-shade" aria-hidden="true" />
@@ -177,7 +115,7 @@ export default function HomePage() {
               <Link className="button button-primary" href="/catalogue">
                 Explore Products
               </Link>
-              <Link className="button button-secondary" href="/#contact">
+              <Link className="button button-secondary" href="/contact#contact-form">
                 Request a Quote
               </Link>
             </div>
@@ -242,7 +180,7 @@ export default function HomePage() {
                   </div>
                   <Link
                     className="category-link"
-                    href="/catalogue"
+                    href="/catalogue/treatment-chairs"
                     style={{ color: category.accent }}
                   >
                     View products <ArrowRight size={17} strokeWidth={1.8} aria-hidden="true" />
@@ -277,7 +215,7 @@ export default function HomePage() {
                 <li>Tilt Tables</li>
                 <li>Radiology Tables</li>
               </ul>
-              <Link className="secondary-link teal-link" href="/catalogue">
+              <Link className="secondary-link teal-link" href="/catalogue/treatment-chairs">
                 View products <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
@@ -297,6 +235,33 @@ export default function HomePage() {
               </p>
               <Link className="secondary-link" href="/catalogue">
                 Learn more <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+            </div>
+          </article>
+
+          <article className="secondary-card secondary-product-card">
+            <div className="secondary-media work-stools-media">
+              <Image
+                src="/images/work-stool.jpg"
+                alt="Chrome height-adjustable healthcare work stool"
+                fill
+                sizes="(min-width: 1100px) 220px, (min-width: 640px) 45vw, 90vw"
+                unoptimized
+              />
+              <div className="secondary-badge navy-badge">
+                <Armchair size={29} strokeWidth={1.8} aria-hidden="true" />
+              </div>
+            </div>
+            <div className="secondary-content">
+              <h2>Work Stools</h2>
+              <p className="secondary-maker">Professional seating</p>
+              <ul>
+                <li>Medical Stools</li>
+                <li>Operator Stools</li>
+                <li>Height-adjustable Seating</li>
+              </ul>
+              <Link className="secondary-link navy-link" href="/catalogue/treatment-chairs">
+                View products <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </article>
@@ -338,7 +303,7 @@ export default function HomePage() {
                 <li>Protective Films</li>
                 <li>Accessories</li>
               </ul>
-              <Link className="secondary-link navy-link" href="/catalogue">
+              <Link className="secondary-link navy-link" href="/catalogue/treatment-chairs">
                 View products <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
@@ -403,7 +368,7 @@ export default function HomePage() {
             <p>Our team is ready to support you.</p>
           </div>
         </div>
-        <Link className="support-button" href="mailto:contact@woittola.com" id="contact">
+        <Link className="support-button" href="/contact" id="contact">
           Contact us today
         </Link>
       </section>

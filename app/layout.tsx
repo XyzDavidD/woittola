@@ -3,7 +3,16 @@ import "@fontsource/lato/400.css";
 import "@fontsource/lato/700.css";
 import "./globals.css";
 
+const deployedUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(deployedUrl),
   title: {
     default: "Woittola Healthcare",
     template: "%s | Woittola",
@@ -18,7 +27,21 @@ export const metadata: Metadata = {
     title: "Woittola Healthcare",
     description:
       "Professional healthcare furniture and equipment from leading European manufacturers.",
-    images: ["/images/hero.png"],
+    images: [
+      {
+        url: "/woittola-social.png",
+        width: 1200,
+        height: 630,
+        alt: "Woittola Healthcare treatment chair",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Woittola Healthcare",
+    description:
+      "Professional healthcare furniture and equipment from leading European manufacturers.",
+    images: ["/woittola-social.png"],
   },
 };
 

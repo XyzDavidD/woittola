@@ -1,24 +1,23 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   Activity,
   ArrowLeft,
   ChevronRight,
+  CirclePlay,
   ClipboardCheck,
   Download,
   Droplets,
   HandHeart,
-  Menu,
   Syringe,
 } from "lucide-react";
+import SiteHeader from "../../components/SiteHeader";
+import QuoteRequestModal from "../../components/QuoteRequestModal";
 import ProductGallery from "./ProductGallery";
 import ProductInformation from "./ProductInformation";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
-
-const navItems = ["About Us", "Partners", "Support", "Contact"];
 
 const productTypes = [
   { prefix: "medseat-pro", name: "MedSeat Pro", type: "Treatment Chair" },
@@ -45,7 +44,6 @@ function getProduct(slug: string) {
   return {
     ...product,
     name: edition === 1 ? product.name : `${product.name} ${edition}`,
-    isBestseller: routeNumber === 1,
   };
 }
 
@@ -65,57 +63,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <main className="home-page product-detail-page">
-      <header className="site-header">
-        <div className="nav-shell">
-          <Link className="brand" href="/" aria-label="Woittola Healthcare home">
-            <Image
-              src="/images/logo.png"
-              alt="Woittola Healthcare"
-              width={296}
-              height={50}
-              priority
-              unoptimized
-            />
-          </Link>
-
-          <nav className="desktop-nav" aria-label="Main navigation">
-            <Link className="nav-link" href="/">
-              Home
-            </Link>
-            <Link className="nav-link active" href="/catalogue">
-              Products
-            </Link>
-            {navItems.map((item) => (
-              <Link
-                className="nav-link"
-                href={`/#${item.toLowerCase().replaceAll(" ", "-")}`}
-                key={item}
-              >
-                {item}
-              </Link>
-            ))}
-          </nav>
-
-          <Link className="header-quote" href="/#contact">
-            Request a Quote
-          </Link>
-
-          <details className="mobile-menu">
-            <summary aria-label="Open navigation menu">
-              <Menu aria-hidden="true" />
-            </summary>
-            <nav aria-label="Mobile navigation">
-              <Link href="/">Home</Link>
-              <Link href="/catalogue">Products</Link>
-              {navItems.map((item) => (
-                <Link href={`/#${item.toLowerCase().replaceAll(" ", "-")}`} key={item}>
-                  {item}
-                </Link>
-              ))}
-            </nav>
-          </details>
-        </div>
-      </header>
+      <SiteHeader activePage="products" />
 
       <div className="product-detail-shell">
         <nav className="product-detail-breadcrumbs" aria-label="Breadcrumb">
@@ -123,12 +71,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <ChevronRight aria-hidden="true" />
           <Link href="/catalogue">Products</Link>
           <ChevronRight aria-hidden="true" />
-          <Link href="/catalogue">Treatment Chairs</Link>
+          <Link href="/catalogue/treatment-chairs">Treatment Chairs</Link>
           <ChevronRight aria-hidden="true" />
           <span aria-current="page">{product.name}</span>
         </nav>
 
-        <Link className="product-back-link" href="/catalogue">
+        <Link className="product-back-link" href="/catalogue/treatment-chairs">
           <ArrowLeft aria-hidden="true" /> Back to Treatment Chairs
         </Link>
 
@@ -136,7 +84,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <ProductGallery productName={product.name} />
 
           <section className="product-detail-info" aria-labelledby="product-detail-title">
-            {product.isBestseller ? <span className="product-detail-badge">Bestseller</span> : null}
             <h1 id="product-detail-title">{product.name}</h1>
             <p className="product-detail-type">{product.type}</p>
             <p className="product-detail-description">
@@ -158,15 +105,44 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
 
             <div className="product-detail-actions">
-              <Link className="product-detail-quote" href="mailto:contact@woittola.com">
-                Request a Quote
-              </Link>
+              <QuoteRequestModal productName={product.name} />
               <a className="product-detail-brochure" href="#product-detail-title">
                 <Download aria-hidden="true" /> Download Brochure
               </a>
             </div>
           </section>
         </div>
+
+        <section className="product-video-showcase" aria-labelledby="product-video-title">
+          <div className="product-video-copy">
+            <span className="product-video-eyebrow">
+              <CirclePlay aria-hidden="true" /> Product demonstration
+            </span>
+            <h2 id="product-video-title">See clinical seating in action.</h2>
+            <p>
+              Explore how adjustable clinical seating supports safe patient positioning,
+              smooth movement and a more efficient workflow for healthcare professionals.
+            </p>
+            <div className="product-video-notes" aria-label="Video highlights">
+              <span>Patient positioning</span>
+              <span>Caregiver access</span>
+              <span>Clinical mobility</span>
+            </div>
+          </div>
+
+          <div className="product-video-card">
+            <div className="product-video-frame">
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/aAZm3LEU8-8?rel=0&modestbranding=1"
+                title="Clinical treatment chair demonstration"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </section>
 
         <ProductInformation productName={product.name} />
       </div>

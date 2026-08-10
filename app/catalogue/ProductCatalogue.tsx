@@ -163,7 +163,11 @@ function FilterGroup({
   );
 }
 
-export default function ProductCatalogue() {
+type ProductCatalogueProps = {
+  categoryName?: string;
+};
+
+export default function ProductCatalogue({ categoryName = "Treatment Chairs" }: ProductCatalogueProps) {
   const [applications, setApplications] = useState<string[]>([]);
   const [chairTypes, setChairTypes] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
@@ -208,7 +212,7 @@ export default function ProductCatalogue() {
   };
 
   return (
-    <section className="catalogue-products-section" aria-label="Treatment chair catalogue">
+    <section className="catalogue-products-section" aria-label={`${categoryName} catalogue`}>
       <div className="catalogue-layout">
         <aside className="catalogue-filter-card" aria-label="Filter products">
           <div className="catalogue-filter-heading">
