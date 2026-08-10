@@ -1,0 +1,679 @@
+.page {
+  --auth-navy: #0b2349;
+  --auth-blue: #0a4d96;
+  --auth-ink: #172235;
+  position: relative;
+  min-height: 100svh;
+  padding: 72px 28px 34px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 16% 7%, rgba(51, 129, 204, 0.13), transparent 27%),
+    radial-gradient(circle at 88% 91%, rgba(44, 112, 180, 0.12), transparent 25%),
+    linear-gradient(145deg, #f9fbfe 0%, #eff4f9 100%);
+  color: var(--auth-ink);
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.34;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(26, 65, 107, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 65, 107, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 77%);
+}
+
+.glowOne,
+.glowTwo {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.glowOne {
+  width: 240px;
+  height: 240px;
+  top: -110px;
+  left: 12%;
+  border: 1px solid rgba(37, 101, 166, 0.12);
+}
+
+.glowTwo {
+  width: 410px;
+  height: 410px;
+  right: -230px;
+  bottom: -240px;
+  border: 1px solid rgba(37, 101, 166, 0.1);
+}
+
+.backLink {
+  position: absolute;
+  z-index: 3;
+  top: 28px;
+  left: clamp(24px, 4vw, 64px);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #526174;
+  font-size: 13px;
+  font-weight: 700;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  color: var(--auth-blue);
+  transform: translateX(-2px);
+}
+
+.backLink svg {
+  width: 16px;
+  height: 16px;
+}
+
+.shell {
+  position: relative;
+  z-index: 2;
+  width: min(1080px, 100%);
+  min-height: 650px;
+  display: grid;
+  grid-template-columns: minmax(360px, 0.93fr) minmax(440px, 1.07fr);
+  overflow: hidden;
+  border: 1px solid rgba(14, 48, 88, 0.09);
+  border-radius: 26px;
+  background: white;
+  box-shadow: 0 32px 80px rgba(24, 48, 79, 0.14), 0 4px 18px rgba(24, 48, 79, 0.06);
+}
+
+.brandPanel {
+  position: relative;
+  padding: 45px 46px 42px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 8% 100%, rgba(53, 139, 222, 0.37), transparent 38%),
+    radial-gradient(circle at 100% 0%, rgba(81, 154, 226, 0.23), transparent 35%),
+    linear-gradient(150deg, #0b2d5a 0%, #071b39 74%);
+  color: white;
+}
+
+.brandPanel::before {
+  content: "";
+  position: absolute;
+  width: 310px;
+  height: 310px;
+  right: -190px;
+  top: 180px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  box-shadow: 0 0 0 46px rgba(255, 255, 255, 0.025), 0 0 0 92px rgba(255, 255, 255, 0.018);
+}
+
+.brandTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+.logoSurface {
+  width: 245px;
+  height: 60px;
+  padding: 0 17px;
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+}
+
+.logoSurface img {
+  width: 100%;
+  height: auto;
+}
+
+.secureBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.87);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.secureBadge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.brandCopy {
+  position: relative;
+  z-index: 1;
+  margin: auto 0 54px;
+}
+
+.brandEyebrow {
+  display: block;
+  margin-bottom: 14px;
+  color: #83bcea;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.brandCopy h2 {
+  max-width: 390px;
+  margin: 0;
+  color: white;
+  font-size: clamp(28px, 2.6vw, 39px);
+  line-height: 1.13;
+  letter-spacing: -0.035em;
+}
+
+.brandCopy p {
+  max-width: 380px;
+  margin: 19px 0 0;
+  color: rgba(229, 239, 250, 0.71);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.trustList {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 11px;
+}
+
+.trustList span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(235, 244, 253, 0.73);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.trustList svg {
+  width: 16px;
+  height: 16px;
+  padding: 3px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(103, 180, 235, 0.17);
+  color: #99d0f6;
+}
+
+.brandLock {
+  position: absolute;
+  right: -28px;
+  bottom: -35px;
+  opacity: 0.035;
+  transform: rotate(-8deg);
+}
+
+.brandLock svg {
+  width: 180px;
+  height: 180px;
+  stroke-width: 1;
+}
+
+.formPanel {
+  position: relative;
+  min-width: 0;
+  padding: 50px clamp(44px, 5.2vw, 76px) 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.mobileBrand {
+  display: none;
+}
+
+.formContainer {
+  width: 100%;
+  max-width: 410px;
+  margin: auto;
+}
+
+.formHeader {
+  margin-bottom: 32px;
+}
+
+.formHeader > span {
+  display: block;
+  margin-bottom: 11px;
+  color: #1762aa;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.formHeader h1 {
+  margin: 0;
+  color: #13233a;
+  font-size: clamp(31px, 3.1vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.formHeader p {
+  margin: 14px 0 0;
+  color: #6b7787;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.form {
+  display: grid;
+  gap: 20px;
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.fieldGroup > label {
+  color: #29384b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.inputWrap {
+  position: relative;
+}
+
+.inputIcon {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  width: 18px;
+  height: 18px;
+  color: #8290a0;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.inputWrap input {
+  width: 100%;
+  height: 54px;
+  padding: 0 48px 0 47px;
+  border: 1px solid #dce3eb;
+  border-radius: 11px;
+  outline: none;
+  background: #fbfcfe;
+  color: #1c2c41;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.inputWrap input::placeholder {
+  color: #9ba6b3;
+}
+
+.inputWrap input:hover {
+  border-color: #c7d2df;
+}
+
+.inputWrap input:focus {
+  border-color: #2c6eae;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(35, 106, 174, 0.1);
+}
+
+.togglePassword {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #7f8b99;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.togglePassword:hover,
+.togglePassword:focus-visible {
+  background: #eef3f8;
+  color: #174e88;
+}
+
+.togglePassword svg {
+  width: 18px;
+  height: 18px;
+}
+
+.formMeta {
+  margin-top: -3px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.textLink {
+  color: #145b9f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.textLink:hover,
+.textLink:focus-visible {
+  color: #083e79;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.submitButton {
+  position: relative;
+  height: 55px;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(110deg, #0b3b76, #0955a1);
+  box-shadow: 0 12px 22px rgba(10, 67, 128, 0.21);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 170ms ease, box-shadow 170ms ease, filter 170ms ease;
+}
+
+.submitButton:hover:not(:disabled),
+.submitButton:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 28px rgba(10, 67, 128, 0.28);
+  filter: saturate(1.08);
+}
+
+.submitButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.submitButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.message {
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.message svg {
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  flex: 0 0 auto;
+}
+
+.error {
+  border: 1px solid #f1d2d3;
+  background: #fff6f6;
+  color: #a13c41;
+}
+
+.success {
+  border: 1px solid #cde6dc;
+  background: #f2fbf7;
+  color: #287057;
+}
+
+.helperText {
+  color: #7a8796;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.formFooter {
+  margin: 23px 0 0;
+  color: #8692a0;
+  font-size: 11px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.securityNote {
+  margin: auto auto 0;
+  padding-top: 30px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #9aa4af;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.securityNote svg {
+  width: 12px;
+  height: 12px;
+}
+
+.successState {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.successIcon {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: #eaf7f1;
+  color: #28785b;
+}
+
+.successIcon svg {
+  width: 27px;
+  height: 27px;
+}
+
+.successState h2 {
+  margin: 0;
+  color: #19304a;
+  font-size: 22px;
+}
+
+.successState p {
+  max-width: 340px;
+  margin: 11px 0 23px;
+  color: #6d7988;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.backButton {
+  min-height: 44px;
+  padding: 0 17px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d8e1ea;
+  border-radius: 9px;
+  color: #184f88;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.backButton:hover,
+.backButton:focus-visible {
+  background: #f3f7fb;
+}
+
+.backButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 72px 22px 30px;
+  }
+
+  .shell {
+    width: min(560px, 100%);
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .brandPanel {
+    display: none;
+  }
+
+  .formPanel {
+    min-height: 650px;
+    padding: 36px clamp(28px, 8vw, 56px) 28px;
+  }
+
+  .mobileBrand {
+    margin-bottom: 55px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .mobileBrand img {
+    width: 205px;
+    height: auto;
+  }
+
+  .mobileBrand span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #53708e;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .mobileBrand span svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+@media (max-width: 540px) {
+  .page {
+    padding: 60px 12px 12px;
+    place-items: start center;
+  }
+
+  .page::before {
+    display: none;
+  }
+
+  .backLink {
+    top: 22px;
+    left: 19px;
+  }
+
+  .shell {
+    border-radius: 19px;
+  }
+
+  .formPanel {
+    min-height: calc(100svh - 72px);
+    padding: 28px 24px 22px;
+  }
+
+  .mobileBrand {
+    margin-bottom: 46px;
+  }
+
+  .mobileBrand img {
+    width: 178px;
+  }
+
+  .mobileBrand span {
+    font-size: 0;
+  }
+
+  .mobileBrand span svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .formHeader {
+    margin-bottom: 27px;
+  }
+
+  .formHeader h1 {
+    font-size: 31px;
+  }
+
+  .inputWrap input {
+    height: 52px;
+  }
+
+  .submitButton {
+    height: 53px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backLink,
+  .submitButton {
+    transition: none;
+  }
+
+  .spinner {
+    animation-duration: 1.4s;
+  }
+}

@@ -17,7 +17,6 @@ import {
   LayoutGrid,
   ListChecks,
   Package,
-  Palette,
   Pencil,
   Plus,
   Search,
@@ -30,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { productCategories } from "../data/catalogue";
+import DashboardLogoutButton from "./DashboardLogoutButton";
 
 type DashboardView = "products" | "categories";
 type ProductStatus = "Published" | "Draft";
@@ -545,12 +545,13 @@ export default function Dashboard() {
         </nav>
         <div className="admin-sidebar-bottom">
           <Link href="/" target="_blank"><ExternalLink aria-hidden="true" /> View website</Link>
+          <DashboardLogoutButton />
         </div>
       </aside>
 
       <div className="admin-main">
         <header className="admin-topbar">
-          <div><p>Woittola Healthcare</p><span>Visual dashboard preview</span></div>
+          <div><p>Woittola Healthcare</p><span>Secure administrator workspace</span></div>
         </header>
 
         {view === "products" ? (

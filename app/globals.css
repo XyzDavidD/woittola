@@ -4965,6 +4965,40 @@ summary {
   height: 16px;
 }
 
+.admin-sign-out {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #687586;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.admin-sign-out:hover,
+.admin-sign-out:focus-visible {
+  background: #fff2f2;
+  color: #a33b42;
+}
+
+.admin-sign-out:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.admin-sign-out svg {
+  width: 16px;
+  height: 16px;
+}
+
 .admin-sidebar-bottom > div {
   margin-top: 11px;
   padding: 10px 11px 0;
