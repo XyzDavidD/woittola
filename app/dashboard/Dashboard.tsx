@@ -10,16 +10,17 @@ import {
   CircleCheck,
   ExternalLink,
   FileText,
-  FolderPlus,
   GripVertical,
   ImagePlus,
-  Info,
   LayoutGrid,
+  Languages,
   ListChecks,
+  LoaderCircle,
   Package,
   Pencil,
   Plus,
   Search,
+  RefreshCw,
   Settings2,
   Sparkles,
   Tag,
@@ -28,45 +29,43 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { productCategories } from "../data/catalogue";
+import { createClient } from "@/lib/supabase/client";
+import type { CatalogueCategory, CatalogueProduct, ColorOption, Specification } from "@/lib/catalogue/types";
 import DashboardLogoutButton from "./DashboardLogoutButton";
 
 type DashboardView = "products" | "categories";
 type ProductStatus = "Published" | "Draft";
 type EditorStep = "details" | "content" | "technical";
 
-type DashboardProduct = {
-  id: string;
+type DashboardProduct = CatalogueProduct & {
   name: string;
-  slug: string;
   type: string;
   category: string;
   image: string;
   description: string;
-  status: ProductStatus;
+  displayStatus: ProductStatus;
   updated: string;
 };
 
-type DashboardCategory = {
-  id: string;
+type DashboardCategory = CatalogueCategory & {
   name: string;
+  heroTitle: string;
+  heroDescription: string;
 };
 
-type ColorOption = {
+type UploadAsset = {
   name: string;
-  value: string;
-};
-
-type Specification = {
-  label: string;
-  value: string;
+  url?: string;
+  file?: File;
 };
 
 type ProductDraft = {
   id?: string;
   name: string;
   slug: string;
-  category: string;
+  categoryId: string;
+  brand: string;
+  productType: string;
   description: string;
   applications: string[];
   typicalApplications: string[];
@@ -75,30 +74,21 @@ type ProductDraft = {
   colors: ColorOption[];
   specifications: Specification[];
   accessories: string[];
-  imageNames: string[];
-  brochureName: string;
-  technicalSheetName: string;
-  videoFileName: string;
+  images: UploadAsset[];
+  brochure: UploadAsset[];
+  technicalSheet: UploadAsset[];
+  video: UploadAsset[];
 };
 
-const initialCategories: DashboardCategory[] = productCategories.map((category) => ({
-  id: category.slug,
-  name: category.name,
-}));
-
-const initialProducts: DashboardProduct[] = productCategories.flatMap((category, categoryIndex) =>
-  category.products.map((product, productIndex) => ({
-    id: product.slug,
-    name: product.name,
-    slug: product.slug,
-    type: product.type,
-    category: category.name,
-    image: product.image,
-    description: `${product.name} is designed for dependable professional healthcare use and comfortable day-to-day care.`,
-    status: categoryIndex === 7 && productIndex === 2 ? "Draft" : "Published",
-    updated: productIndex === 0 ? "Today" : productIndex === 1 ? "2 days ago" : "Last week",
-  })),
-);
+type CategoryDraft = {
+  id: string;
+  slug: string;
+  name: string;
+  heroTitle: string;
+  heroDescription: string;
+  heroImage: UploadAsset[];
+  isPublished: boolean;
+};
 
 const editorSteps: Array<{
   id: EditorStep;
@@ -118,89 +108,96 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-function createDraft(product?: DashboardProduct): ProductDraft {
+function createDraft(categories: DashboardCategory[], product?: DashboardProduct): ProductDraft {
+  const translation = product?.translations.en;
+
   return {
     id: product?.id,
     name: product?.name ?? "",
     slug: product?.slug ?? "",
-    category: product?.category ?? initialCategories[1].name,
-    description:
-      product?.description ??
-      "Describe what this product is, who it is designed for and the main value it provides to healthcare professionals.",
-    applications: ["Dialysis", "Infusion Therapy", "Chemotherapy"],
-    typicalApplications: [
-      "Dialysis units",
-      "Infusion therapy",
-      "Outpatient clinics and day surgery",
-    ],
-    keyFeatures: [
-      "Ergonomic design",
-      "Electric adjustments",
-      "Easy-to-clean upholstery",
-      "Patient safety and comfort",
-    ],
-    reasons: [
-      "Fully electric adjustments for optimal positioning",
-      "Wide range of comfortable treatment positions",
-      "Durable, removable and easy-to-clean cushions",
-    ],
-    colors: [
-      { name: "Ocean", value: "#2d6497" },
-      { name: "Graphite", value: "#59606a" },
-      { name: "Taupe", value: "#8a8174" },
-    ],
-    specifications: [
-      { label: "Adjustment", value: "Fully electric positioning" },
-      { label: "Upholstery", value: "Medical-grade, removable and easy to clean" },
-      { label: "Certification", value: "CE marked medical device" },
-    ],
-    accessories: ["Height-adjustable IV pole", "Removable side supports", "Paper roll holder"],
-    imageNames: product ? [product.image.split("/").at(-1) ?? "product-image.jpg"] : [],
-    brochureName: "",
-    technicalSheetName: "",
-    videoFileName: "",
+    categoryId: product?.categoryId ?? categories[0]?.id ?? "",
+    brand: product?.brand ?? "",
+    productType: product?.productType ?? "",
+    description: translation?.description ?? "",
+    applications: product?.applications ?? [],
+    typicalApplications: translation?.typicalApplications ?? [],
+    keyFeatures: translation?.keyFeatures ?? [],
+    reasons: translation?.reasons ?? [],
+    colors: translation?.colors ?? [],
+    specifications: translation?.specifications ?? [],
+    accessories: translation?.accessories ?? [],
+    images: product ? [product.primaryImageUrl, ...product.galleryUrls].filter(Boolean).map((url) => ({ name: url.split("/").at(-1) ?? "product image", url })) : [],
+    brochure: product?.brochureUrl ? [{ name: product.brochureUrl.split("/").at(-1) ?? "brochure.pdf", url: product.brochureUrl }] : [],
+    technicalSheet: product?.technicalSheetUrl ? [{ name: product.technicalSheetUrl.split("/").at(-1) ?? "technical-sheet.pdf", url: product.technicalSheetUrl }] : [],
+    video: product?.videoUrl ? [{ name: product.videoUrl.split("/").at(-1) ?? "product-video", url: product.videoUrl }] : [],
   };
 }
 
 type ListEditorProps = {
-  items: string[];
-  onChange: (items: string[]) => void;
+  values: string[];
+  onChange: (values: string[]) => void;
   placeholder: string;
   addLabel: string;
   maxItems?: number;
 };
 
-function ListEditor({ items, onChange, placeholder, addLabel, maxItems }: ListEditorProps) {
-  const isAtLimit = maxItems !== undefined && items.length >= maxItems;
+function ListEditor({ values, onChange, placeholder, addLabel, maxItems }: ListEditorProps) {
+  const isAtLimit = maxItems !== undefined && values.length >= maxItems;
 
   return (
-    <div className="admin-list-editor">
-      {items.map((item, index) => (
-        <div className="admin-list-row" key={`${index}-${item}`}>
+    <div className="admin-list-editor admin-bilingual-list-editor admin-single-list-editor">
+      {values.map((value, index) => (
+        <div className="admin-bilingual-list-row admin-single-list-row" key={index}>
           <GripVertical aria-hidden="true" />
-          <input
-            aria-label={`${addLabel} ${index + 1}`}
-            value={item}
-            placeholder={placeholder}
-            onChange={(event) =>
-              onChange(items.map((current, itemIndex) => (itemIndex === index ? event.target.value : current)))
-            }
-          />
-          <button
-            type="button"
-            aria-label={`Remove ${item || addLabel}`}
-            onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
-          >
-            <X aria-hidden="true" />
-          </button>
+          <label><span>EN</span><input aria-label={`${addLabel} ${index + 1}`} value={value} placeholder={placeholder} onChange={(event) => onChange(values.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} /></label>
+          <button type="button" aria-label={`Remove ${value || addLabel}`} onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))}><X aria-hidden="true" /></button>
         </div>
       ))}
       <div className="admin-list-editor-footer">
-        <button className="admin-add-row" type="button" disabled={isAtLimit} onClick={() => onChange([...items, ""])}>
-          <Plus aria-hidden="true" /> {isAtLimit ? `Maximum ${maxItems} applications` : addLabel}
-        </button>
-        {maxItems !== undefined ? <span>{items.length} / {maxItems}</span> : null}
+        <button className="admin-add-row" type="button" disabled={isAtLimit} onClick={() => onChange([...values, ""])}><Plus aria-hidden="true" /> {isAtLimit ? `Maximum ${maxItems} items` : addLabel}</button>
+        {maxItems !== undefined ? <span>{values.length} / {maxItems}</span> : null}
       </div>
+    </div>
+  );
+}
+
+type ColorEditorProps = {
+  values: ColorOption[];
+  onChange: (values: ColorOption[]) => void;
+};
+
+function ColorEditor({ values, onChange }: ColorEditorProps) {
+  return (
+    <div className="admin-bilingual-color-editor admin-single-color-editor">
+      {values.map((row, index) => (
+        <div className="admin-bilingual-color-row admin-single-color-row" key={index}>
+          <input type="color" aria-label={`Color ${index + 1}`} value={row.value} onChange={(event) => onChange(values.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} />
+          <label><span>EN</span><input aria-label={`Color name ${index + 1}`} value={row.name} placeholder="e.g. Navy blue" onChange={(event) => onChange(values.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} /></label>
+          <span>{row.value}</span>
+          <button type="button" aria-label={`Remove ${row.name || "color"}`} onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))}><X aria-hidden="true" /></button>
+        </div>
+      ))}
+      <button className="admin-add-row" type="button" onClick={() => onChange([...values, { name: "", value: "#6d8198" }])}><Plus aria-hidden="true" /> Add color</button>
+    </div>
+  );
+}
+
+type SpecificationEditorProps = {
+  values: Specification[];
+  onChange: (values: Specification[]) => void;
+};
+
+function SpecificationEditor({ values, onChange }: SpecificationEditorProps) {
+  return (
+    <div className="admin-bilingual-specification-editor admin-single-specification-editor">
+      {values.map((row, index) => (
+        <div className="admin-bilingual-specification-row admin-single-specification-row" key={index}>
+          <GripVertical aria-hidden="true" />
+          <div><span>EN</span><input aria-label={`Specification label ${index + 1}`} value={row.label} placeholder="Label" onChange={(event) => onChange(values.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} /><input aria-label={`Specification value ${index + 1}`} value={row.value} placeholder="Value" onChange={(event) => onChange(values.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} /></div>
+          <button type="button" aria-label={`Remove ${row.label || "specification"}`} onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))}><X aria-hidden="true" /></button>
+        </div>
+      ))}
+      <button className="admin-add-row" type="button" onClick={() => onChange([...values, { label: "", value: "" }])}><Plus aria-hidden="true" /> Add specification</button>
     </div>
   );
 }
@@ -211,8 +208,8 @@ type UploadFieldProps = {
   description: string;
   accept: string;
   multiple?: boolean;
-  files: string[];
-  onFiles: (files: string[]) => void;
+  files: UploadAsset[];
+  onFiles: (files: UploadAsset[]) => void;
 };
 
 function UploadField({ icon: Icon, title, description, accept, multiple, files, onFiles }: UploadFieldProps) {
@@ -223,7 +220,10 @@ function UploadField({ icon: Icon, title, description, accept, multiple, files, 
           type="file"
           accept={accept}
           multiple={multiple}
-          onChange={(event) => onFiles(Array.from(event.target.files ?? []).map((file) => file.name))}
+          onChange={(event) => {
+            const selected = Array.from(event.target.files ?? []).map((file) => ({ name: file.name, file }));
+            onFiles(multiple ? [...files, ...selected] : selected.slice(0, 1));
+          }}
         />
         <span className="admin-upload-icon"><Icon aria-hidden="true" /></span>
         <span>
@@ -235,9 +235,9 @@ function UploadField({ icon: Icon, title, description, accept, multiple, files, 
       {files.length ? (
         <div className="admin-upload-files">
           {files.map((file) => (
-            <span key={file}>
-              <CircleCheck aria-hidden="true" /> {file}
-              <button type="button" aria-label={`Remove ${file}`} onClick={() => onFiles(files.filter((name) => name !== file))}>
+            <span key={`${file.name}-${file.url ?? "new"}`}>
+              <CircleCheck aria-hidden="true" /> {file.name}
+              <button type="button" aria-label={`Remove ${file.name}`} onClick={() => onFiles(files.filter((item) => item !== file))}>
                 <X aria-hidden="true" />
               </button>
             </span>
@@ -252,12 +252,13 @@ type ProductEditorProps = {
   product?: DashboardProduct;
   categories: DashboardCategory[];
   onCancel: () => void;
-  onSave: (draft: ProductDraft, status: ProductStatus) => void;
+  onSave: (draft: ProductDraft, status: ProductStatus) => Promise<boolean>;
 };
 
 function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorProps) {
   const [activeStep, setActiveStep] = useState<EditorStep>("details");
-  const [draft, setDraft] = useState<ProductDraft>(() => createDraft(product));
+  const [draft, setDraft] = useState<ProductDraft>(() => createDraft(categories, product));
+  const [saving, setSaving] = useState(false);
 
   const updateDraft = <Key extends keyof ProductDraft>(key: Key, value: ProductDraft[Key]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -268,7 +269,24 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
     if (index < editorSteps.length - 1) setActiveStep(editorSteps[index + 1].id);
   };
 
-  const canSave = draft.name.trim() && draft.category && draft.description.trim();
+  const canSave = Boolean(
+    draft.name.trim() &&
+    draft.description.trim() &&
+    draft.categoryId &&
+    draft.images.length,
+  );
+  const missingRequirements = [
+    !draft.name.trim() ? "product title" : "",
+    !draft.description.trim() ? "product description" : "",
+    !draft.images.length ? "one product image" : "",
+  ].filter(Boolean);
+
+  const saveProduct = async (status: ProductStatus) => {
+    if (!canSave || saving) return;
+    setSaving(true);
+    const saved = await onSave(draft, status);
+    if (!saved) setSaving(false);
+  };
 
   return (
     <div className="admin-editor-page">
@@ -278,6 +296,7 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
             <div>
               <p>{product ? "Edit product" : "New product"}</p>
               <h1>{draft.name || "Untitled product"}</h1>
+              <small className={missingRequirements.length ? "admin-editor-requirements" : "admin-editor-requirements complete"}>{missingRequirements.length ? `Still required: ${missingRequirements.join(", ")}.` : "Required product information is complete."}</small>
             </div>
           </div>
         </div>
@@ -287,8 +306,8 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
               <ExternalLink aria-hidden="true" /> View product
             </Link>
           ) : null}
-          <button type="button" className="admin-publish-product" disabled={!canSave} onClick={() => onSave(draft, "Published")}>
-            <Check aria-hidden="true" /> {product ? "Save changes" : "Add product"}
+          <button type="button" className="admin-publish-product" disabled={!canSave || saving} onClick={() => saveProduct("Published")}>
+            <Check aria-hidden="true" /> {saving ? "Saving & translating…" : product ? "Save changes" : "Add product"}
           </button>
         </div>
       </header>
@@ -304,8 +323,8 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
             </button>
           ))}
           <div className="admin-editor-tip">
-            <Info aria-hidden="true" />
-            <p><strong>Nothing is saved online yet.</strong> This form is a working visual preview for the future database connection.</p>
+            <Languages aria-hidden="true" />
+            <p><strong>Write in English.</strong> Finnish is generated automatically after saving. Only the title, description and one image are required.</p>
           </div>
         </nav>
 
@@ -319,29 +338,25 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
 
               <div className="admin-form-grid">
                 <label className="admin-field">
-                  <span>Product name *</span>
-                  <input
-                    value={draft.name}
-                    placeholder="e.g. MedSeat Pro"
-                    onChange={(event) => {
-                      updateDraft("name", event.target.value);
-                      updateDraft("slug", slugify(event.target.value));
-                    }}
-                  />
+                  <span>Category</span>
+                  <select value={draft.categoryId} onChange={(event) => updateDraft("categoryId", event.target.value)}>
+                    {categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
+                  </select>
                 </label>
                 <label className="admin-field">
-                  <span>Category *</span>
-                  <select value={draft.category} onChange={(event) => updateDraft("category", event.target.value)}>
-                    {categories.map((category) => <option key={category.id}>{category.name}</option>)}
-                  </select>
+                  <span>Brand <small>Optional</small></span>
+                  <input value={draft.brand} placeholder="e.g. Greiner" onChange={(event) => updateDraft("brand", event.target.value)} />
                 </label>
               </div>
 
-              <label className="admin-field admin-full-field">
-                <span>Product description *</span>
-                <textarea rows={6} value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} />
-                <small>{draft.description.length} characters · Aim for a clear 2–3 sentence introduction.</small>
-              </label>
+              <div className="admin-product-language-grid admin-product-language-grid-single">
+                <section className="admin-product-language-panel">
+                  <div className="admin-product-language-heading"><span>EN</span><div><h3>Product content</h3><p>Finnish will be created automatically with Gemini</p></div></div>
+                  <label className="admin-field"><span>Product title *</span><input value={draft.name} placeholder="e.g. MedSeat Pro" onChange={(event) => { updateDraft("name", event.target.value); if (!draft.id) updateDraft("slug", slugify(event.target.value)); }} /></label>
+                  <label className="admin-field"><span>Product type <small>Optional</small></span><input value={draft.productType} placeholder="e.g. Electric treatment chair" onChange={(event) => updateDraft("productType", event.target.value)} /></label>
+                  <label className="admin-field"><span>Description *</span><textarea rows={6} value={draft.description} placeholder="Describe the product, who it is for and the main value it provides." onChange={(event) => updateDraft("description", event.target.value)} /><small>{draft.description.length} characters</small></label>
+                </section>
+              </div>
 
             </section>
           ) : null}
@@ -354,24 +369,24 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
               </div>
 
               <div className="admin-field-section">
-                <div className="admin-section-label"><h3>Product gallery *</h3><p>Upload up to 8 images. The first image becomes the main product image.</p></div>
-                <UploadField icon={ImagePlus} title="Upload product images" description="JPG, PNG or WebP · Recommended 1600 × 1200 px" accept="image/*" multiple files={draft.imageNames} onFiles={(files) => updateDraft("imageNames", files)} />
+                <div className="admin-section-label"><h3>Product gallery *</h3><p>At least one image is required. Upload up to 8; the first becomes the main image.</p></div>
+                <UploadField icon={ImagePlus} title="Upload product images" description="JPG, PNG or WebP · Recommended 1600 × 1200 px" accept="image/*" multiple files={draft.images} onFiles={(files) => updateDraft("images", files.slice(0, 8))} />
               </div>
 
               <div className="admin-two-column-fields">
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Product brochure</h3><p>Displayed beside the quote button and in Downloads.</p></div>
-                  <UploadField icon={FileText} title="Upload brochure" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.brochureName ? [draft.brochureName] : []} onFiles={(files) => updateDraft("brochureName", files[0] ?? "")} />
+                  <UploadField icon={FileText} title="Upload brochure" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.brochure} onFiles={(files) => updateDraft("brochure", files.slice(0, 1))} />
                 </div>
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Technical data sheet</h3><p>Optional second document in the Downloads tab.</p></div>
-                  <UploadField icon={FileText} title="Upload data sheet" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.technicalSheetName ? [draft.technicalSheetName] : []} onFiles={(files) => updateDraft("technicalSheetName", files[0] ?? "")} />
+                  <UploadField icon={FileText} title="Upload data sheet" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.technicalSheet} onFiles={(files) => updateDraft("technicalSheet", files.slice(0, 1))} />
                 </div>
               </div>
 
               <div className="admin-field-section admin-video-section">
                 <div className="admin-section-label"><h3>Product video</h3><p>Upload the demonstration video shown on the product page.</p></div>
-                <UploadField icon={Video} title="Upload product video" description="MP4 or WebM · Maximum 250 MB" accept="video/mp4,video/webm" files={draft.videoFileName ? [draft.videoFileName] : []} onFiles={(files) => updateDraft("videoFileName", files[0] ?? "")} />
+                <UploadField icon={Video} title="Upload product video" description="MP4 or WebM · Maximum 250 MB" accept="video/mp4,video/webm" files={draft.video} onFiles={(files) => updateDraft("video", files.slice(0, 1))} />
               </div>
             </section>
           ) : null}
@@ -386,35 +401,25 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
               <div className="admin-content-grid">
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Applications</h3><p>Shown near the product name with icons.</p></div>
-                  <ListEditor items={draft.applications} onChange={(items) => updateDraft("applications", items)} placeholder="e.g. Dialysis" addLabel="Add application" maxItems={5} />
+                  <ListEditor values={draft.applications} onChange={(values) => updateDraft("applications", values)} placeholder="e.g. Dialysis" addLabel="Add application" maxItems={5} />
                 </div>
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Typical applications</h3><p>The detailed clinical use list in Overview.</p></div>
-                  <ListEditor items={draft.typicalApplications} onChange={(items) => updateDraft("typicalApplications", items)} placeholder="e.g. Outpatient clinics" addLabel="Add typical use" />
+                  <ListEditor values={draft.typicalApplications} onChange={(values) => updateDraft("typicalApplications", values)} placeholder="e.g. Outpatient clinics" addLabel="Add typical use" />
                 </div>
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Key features</h3><p>Short benefits displayed as feature tiles.</p></div>
-                  <ListEditor items={draft.keyFeatures} onChange={(items) => updateDraft("keyFeatures", items)} placeholder="e.g. Electric adjustments" addLabel="Add key feature" />
+                  <ListEditor values={draft.keyFeatures} onChange={(values) => updateDraft("keyFeatures", values)} placeholder="e.g. Electric adjustments" addLabel="Add key feature" />
                 </div>
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Why choose this product?</h3><p>Reasons that help the customer compare options.</p></div>
-                  <ListEditor items={draft.reasons} onChange={(items) => updateDraft("reasons", items)} placeholder="e.g. Easy-to-clean cushions" addLabel="Add reason" />
+                  <ListEditor values={draft.reasons} onChange={(values) => updateDraft("reasons", values)} placeholder="e.g. Easy-to-clean cushions" addLabel="Add reason" />
                 </div>
               </div>
 
               <div className="admin-field-section admin-colors-section">
                 <div className="admin-section-label"><h3>Available colors</h3><p>Add the upholstery or finish colors customers can request.</p></div>
-                <div className="admin-color-editor">
-                  {draft.colors.map((color, index) => (
-                    <div className="admin-color-row" key={`${color.name}-${index}`}>
-                      <input type="color" aria-label={`Color ${index + 1}`} value={color.value} onChange={(event) => updateDraft("colors", draft.colors.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} />
-                      <input aria-label={`Color name ${index + 1}`} value={color.name} placeholder="Color name" onChange={(event) => updateDraft("colors", draft.colors.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} />
-                      <span>{color.value}</span>
-                      <button type="button" aria-label={`Remove ${color.name}`} onClick={() => updateDraft("colors", draft.colors.filter((_, itemIndex) => itemIndex !== index))}><X aria-hidden="true" /></button>
-                    </div>
-                  ))}
-                  <button className="admin-add-row" type="button" onClick={() => updateDraft("colors", [...draft.colors, { name: "New color", value: "#6d8198" }])}><Plus aria-hidden="true" /> Add color</button>
-                </div>
+                <ColorEditor values={draft.colors} onChange={(values) => updateDraft("colors", values)} />
               </div>
             </section>
           ) : null}
@@ -428,22 +433,12 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
 
               <div className="admin-field-section">
                 <div className="admin-section-label"><h3>Specifications</h3><p>Use a clear label and value for each technical detail.</p></div>
-                <div className="admin-specification-editor">
-                  {draft.specifications.map((specification, index) => (
-                    <div className="admin-specification-row" key={`${index}-${specification.label}`}>
-                      <GripVertical aria-hidden="true" />
-                      <input aria-label={`Specification label ${index + 1}`} value={specification.label} placeholder="Label" onChange={(event) => updateDraft("specifications", draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} />
-                      <input aria-label={`Specification value ${index + 1}`} value={specification.value} placeholder="Value" onChange={(event) => updateDraft("specifications", draft.specifications.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} />
-                      <button type="button" aria-label={`Remove ${specification.label}`} onClick={() => updateDraft("specifications", draft.specifications.filter((_, itemIndex) => itemIndex !== index))}><X aria-hidden="true" /></button>
-                    </div>
-                  ))}
-                  <button className="admin-add-row" type="button" onClick={() => updateDraft("specifications", [...draft.specifications, { label: "", value: "" }])}><Plus aria-hidden="true" /> Add specification</button>
-                </div>
+                <SpecificationEditor values={draft.specifications} onChange={(values) => updateDraft("specifications", values)} />
               </div>
 
               <div className="admin-field-section">
                 <div className="admin-section-label"><h3>Options &amp; accessories</h3><p>List compatible accessories and optional product configurations.</p></div>
-                <ListEditor items={draft.accessories} onChange={(items) => updateDraft("accessories", items)} placeholder="e.g. Additional headrest" addLabel="Add accessory" />
+                <ListEditor values={draft.accessories} onChange={(values) => updateDraft("accessories", values)} placeholder="e.g. Additional headrest" addLabel="Add accessory" />
               </div>
 
               <div className="admin-ready-card">
@@ -458,7 +453,7 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
             {activeStep !== "technical" ? (
               <button type="button" onClick={goToNextStep}>Continue <ChevronRight aria-hidden="true" /></button>
             ) : (
-              <button type="button" disabled={!canSave} onClick={() => onSave(draft, "Published")}><Check aria-hidden="true" /> {product ? "Save changes" : "Add product"}</button>
+              <button type="button" disabled={!canSave || saving} onClick={() => saveProduct("Published")}><Check aria-hidden="true" /> {saving ? "Saving & translating…" : product ? "Save changes" : "Add product"}</button>
             )}
           </div>
         </div>
@@ -467,16 +462,171 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
   );
 }
 
-export default function Dashboard() {
+type CategoryEditorProps = {
+  category: DashboardCategory;
+  onCancel: () => void;
+  onSave: (draft: CategoryDraft) => Promise<boolean>;
+};
+
+function CategoryEditor({ category, onCancel, onSave }: CategoryEditorProps) {
+  const [draft, setDraft] = useState<CategoryDraft>({
+    id: category.id,
+    slug: category.slug,
+    name: category.name,
+    heroTitle: category.heroTitle,
+    heroDescription: category.heroDescription,
+    heroImage: category.heroImageUrl ? [{ name: category.heroImageUrl.split("/").at(-1) ?? "hero image", url: category.heroImageUrl }] : [],
+    isPublished: category.isPublished,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const update = <Key extends keyof CategoryDraft>(key: Key, value: CategoryDraft[Key]) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!draft.name.trim() || !draft.heroTitle.trim() || !draft.heroDescription.trim() || saving) return;
+    setSaving(true);
+    const saved = await onSave(draft);
+    if (!saved) setSaving(false);
+  };
+
+  return (
+    <div className="admin-modal-overlay">
+      <section className="admin-category-editor" role="dialog" aria-modal="true" aria-labelledby="category-editor-title">
+        <header>
+          <div><p>Edit category</p><h2 id="category-editor-title">{category.name}</h2><small>/catalogue/{category.slug}</small></div>
+          <button type="button" onClick={onCancel} aria-label="Close category editor"><X aria-hidden="true" /></button>
+        </header>
+
+        <div className="admin-category-editor-body">
+          <div className="admin-category-language-section">
+            <div className="admin-category-language-heading"><span>EN</span><div><h3>Category content</h3><p>Finnish will be created automatically with Gemini</p></div></div>
+            <div className="admin-form-grid">
+              <label className="admin-field"><span>Category name *</span><input value={draft.name} onChange={(event) => update("name", event.target.value)} /></label>
+              <label className="admin-field"><span>Hero title *</span><input value={draft.heroTitle} onChange={(event) => update("heroTitle", event.target.value)} /></label>
+            </div>
+            <label className="admin-field admin-full-field"><span>Hero description *</span><textarea rows={4} value={draft.heroDescription} onChange={(event) => update("heroDescription", event.target.value)} /></label>
+          </div>
+
+          <div className="admin-category-language-section">
+            <div className="admin-category-language-heading"><ImagePlus aria-hidden="true" /><div><h3>Category hero image</h3><p>Used at the top of this category page</p></div></div>
+            <UploadField icon={ImagePlus} title="Upload hero image" description="JPG, PNG, WebP or AVIF · Recommended 2000 × 900 px" accept="image/*" files={draft.heroImage} onFiles={(files) => update("heroImage", files.slice(0, 1))} />
+            <label className="admin-category-publish-toggle"><input type="checkbox" checked={draft.isPublished} onChange={(event) => update("isPublished", event.target.checked)} /><span>Category is visible on the website</span></label>
+          </div>
+        </div>
+
+        <footer><button type="button" onClick={onCancel}>Cancel</button><button type="button" disabled={saving || !draft.name.trim() || !draft.heroTitle.trim() || !draft.heroDescription.trim()} onClick={handleSave}><Check aria-hidden="true" /> {saving ? "Saving & translating…" : "Save category"}</button></footer>
+      </section>
+    </div>
+  );
+}
+
+function formatUpdatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(date);
+}
+
+function toDashboardCategory(category: CatalogueCategory): DashboardCategory {
+  return {
+    ...category,
+    name: category.translations.en?.name ?? category.slug,
+    heroTitle: category.translations.en?.heroTitle ?? category.translations.en?.name ?? category.slug,
+    heroDescription: category.translations.en?.heroDescription ?? "",
+  };
+}
+
+function toDashboardProduct(product: CatalogueProduct): DashboardProduct {
+  const translation = product.translations.en;
+  return {
+    ...product,
+    name: translation?.name ?? product.slug,
+    type: translation?.productTypeLabel || product.productType,
+    category: product.categoryName,
+    image: product.primaryImageUrl,
+    description: translation?.description ?? "",
+    displayStatus: product.status === "published" ? "Published" : "Draft",
+    updated: formatUpdatedAt(product.updatedAt),
+  };
+}
+
+function cleanList(items: string[]) {
+  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+}
+
+function safeFileName(value: string) {
+  const extension = value.includes(".") ? `.${value.split(".").at(-1)?.toLowerCase().replace(/[^a-z0-9]/g, "")}` : "";
+  const stem = value.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "file";
+  return `${stem}${extension}`;
+}
+
+async function uploadAssets(assets: UploadAsset[], folder: string) {
+  const supabase = createClient();
+  const urls: string[] = [];
+
+  for (const asset of assets) {
+    if (asset.url && !asset.file) {
+      urls.push(asset.url);
+      continue;
+    }
+    if (!asset.file) continue;
+
+    const path = `${folder}/${crypto.randomUUID()}-${safeFileName(asset.file.name)}`;
+    const { error } = await supabase.storage.from("catalogue-media").upload(path, asset.file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) throw error;
+
+    const { data } = supabase.storage.from("catalogue-media").getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+
+  return urls;
+}
+
+type TranslationStatusProps = {
+  status: CatalogueProduct["translationStatus"];
+  error: string;
+  retrying: boolean;
+  onRetry: () => void;
+};
+
+function TranslationStatusBadge({ status, error, retrying, onRetry }: TranslationStatusProps) {
+  const label = status === "ready" ? "Finnish ready" : status === "processing" ? "Translating" : "Translation failed";
+  const Icon = status === "ready" ? CircleCheck : status === "processing" ? LoaderCircle : AlertTriangle;
+
+  return (
+    <span className={`admin-translation-status ${status}`} title={error || label}>
+      <Icon className={status === "processing" ? "spin" : ""} aria-hidden="true" />
+      <span>{label}</span>
+      {status === "failed" ? (
+        <button type="button" disabled={retrying} onClick={onRetry} aria-label="Retry Finnish translation">
+          <RefreshCw className={retrying ? "spin" : ""} aria-hidden="true" /> Retry
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+type DashboardProps = {
+  initialCategories: CatalogueCategory[];
+  initialProducts: CatalogueProduct[];
+  databaseError?: string;
+};
+
+export default function Dashboard({ initialCategories, initialProducts, databaseError }: DashboardProps) {
   const [view, setView] = useState<DashboardView>("products");
-  const [categories, setCategories] = useState<DashboardCategory[]>(initialCategories);
-  const [products, setProducts] = useState<DashboardProduct[]>(initialProducts);
+  const [categories, setCategories] = useState<DashboardCategory[]>(() => initialCategories.map(toDashboardCategory));
+  const [products, setProducts] = useState<DashboardProduct[]>(() => initialProducts.map(toDashboardProduct));
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All categories");
-  const [newCategory, setNewCategory] = useState("");
   const [editingProduct, setEditingProduct] = useState<DashboardProduct | null | undefined>(undefined);
+  const [editingCategory, setEditingCategory] = useState<DashboardCategory | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<DashboardProduct | null>(null);
   const [toast, setToast] = useState("");
+  const [retryingTranslations, setRetryingTranslations] = useState<string[]>([]);
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -491,32 +641,248 @@ export default function Dashboard() {
     });
   }, [categoryFilter, products, search]);
 
-  const categoryCount = (category: string) => products.filter((product) => product.category === category).length;
+  const categoryCount = (categoryId: string) => products.filter((product) => product.categoryId === categoryId).length;
 
   const showToast = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 2800);
   };
 
-  const handleSaveProduct = (draft: ProductDraft, status: ProductStatus) => {
-    const slug = draft.slug || slugify(draft.name);
-    const nextProduct: DashboardProduct = {
-      id: draft.id ?? `${slug}-${Date.now()}`,
-      name: draft.name.trim(),
-      slug,
-      type: products.find((product) => product.id === draft.id)?.type ?? "Healthcare product",
-      category: draft.category,
-      image: "/images/chair2.png",
-      description: draft.description.trim(),
-      status,
-      updated: "Just now",
+  const invokeTranslation = async (body: Record<string, unknown>) => {
+    const supabase = createClient();
+    const { data, error } = await supabase.functions.invoke("catalogue-translate", { body });
+    if (error) throw new Error(error.message || "The translation function could not be reached.");
+    if (!data || typeof data !== "object") throw new Error("The translation function returned an invalid response.");
+    if ("error" in data && typeof data.error === "string") throw new Error(data.error);
+    return data as {
+      entityId: string;
+      translationStatus: CatalogueProduct["translationStatus"];
+      translationError: string | null;
     };
+  };
 
-    setProducts((current) =>
-      draft.id ? current.map((product) => (product.id === draft.id ? nextProduct : product)) : [nextProduct, ...current],
-    );
-    setEditingProduct(undefined);
-    showToast(draft.id ? "Product changes saved locally" : "New product added locally");
+  const handleSaveProduct = async (draft: ProductDraft, status: ProductStatus) => {
+    try {
+      const slug = draft.slug || slugify(draft.name);
+      const category = categories.find((item) => item.id === draft.categoryId);
+      if (!category) throw new Error("Choose a valid category.");
+      if (!draft.name.trim() || !draft.description.trim()) {
+        throw new Error("Add the product title and description.");
+      }
+      if (!draft.images.length) throw new Error("Add at least one product image.");
+
+      const imageUrls = await uploadAssets(draft.images, `products/${slug}/images`);
+      const brochureUrls = await uploadAssets(draft.brochure, `products/${slug}/documents`);
+      const technicalSheetUrls = await uploadAssets(draft.technicalSheet, `products/${slug}/documents`);
+      const videoUrls = await uploadAssets(draft.video, `products/${slug}/video`);
+      if (!imageUrls.length) throw new Error("The product image could not be saved.");
+
+      const applications = cleanList(draft.applications);
+      const englishTranslation = {
+        locale: "en" as const,
+        name: draft.name.trim(),
+        description: draft.description.trim(),
+        productTypeLabel: draft.productType.trim(),
+        applicationLabels: applications,
+        typicalApplications: cleanList(draft.typicalApplications),
+        keyFeatures: cleanList(draft.keyFeatures),
+        reasons: cleanList(draft.reasons),
+        colors: draft.colors.filter((color) => color.name.trim()),
+        specifications: draft.specifications.filter((item) => item.label.trim() && item.value.trim()),
+        accessories: cleanList(draft.accessories),
+      };
+
+      const result = await invokeTranslation({
+        action: "save",
+        entityType: "product",
+        data: {
+          id: draft.id ?? null,
+          categoryId: category.id,
+          slug,
+          brand: draft.brand.trim(),
+          productType: draft.productType.trim(),
+          applications,
+          status: status.toLowerCase(),
+          primaryImageUrl: imageUrls[0],
+          galleryUrls: imageUrls.slice(1),
+          brochureUrl: brochureUrls[0] ?? "",
+          technicalSheetUrl: technicalSheetUrls[0] ?? "",
+          videoUrl: videoUrls[0] ?? "",
+          name: englishTranslation.name,
+          description: englishTranslation.description,
+          productTypeLabel: englishTranslation.productTypeLabel,
+          applicationLabels: englishTranslation.applicationLabels,
+          typicalApplications: englishTranslation.typicalApplications,
+          keyFeatures: englishTranslation.keyFeatures,
+          reasons: englishTranslation.reasons,
+          colors: englishTranslation.colors,
+          specifications: englishTranslation.specifications,
+          accessories: englishTranslation.accessories,
+        },
+      });
+
+      const existing = products.find((product) => product.id === result.entityId);
+      const now = new Date().toISOString();
+      const nextCatalogueProduct: CatalogueProduct = {
+        id: result.entityId,
+        categoryId: category.id,
+        categorySlug: category.slug,
+        categoryName: category.name,
+        slug,
+        brand: draft.brand.trim(),
+        productType: draft.productType.trim(),
+        applications,
+        status: status === "Published" ? "published" : "draft",
+        featured: existing?.featured ?? false,
+        sortOrder: existing?.sortOrder ?? 0,
+        primaryImageUrl: imageUrls[0],
+        galleryUrls: imageUrls.slice(1),
+        brochureUrl: brochureUrls[0] ?? "",
+        technicalSheetUrl: technicalSheetUrls[0] ?? "",
+        videoUrl: videoUrls[0] ?? "",
+        translationStatus: result.translationStatus,
+        translationError: result.translationError ?? "",
+        translatedAt: result.translationStatus === "ready" ? now : existing?.translatedAt ?? "",
+        translationSourceUpdatedAt: now,
+        updatedAt: now,
+        translations: {
+          ...existing?.translations,
+          en: englishTranslation,
+        },
+      };
+      const nextProduct = toDashboardProduct(nextCatalogueProduct);
+      setProducts((current) => draft.id
+        ? current.map((product) => product.id === result.entityId ? nextProduct : product)
+        : [nextProduct, ...current]);
+      setEditingProduct(undefined);
+      showToast(result.translationStatus === "ready"
+        ? draft.id ? "Product saved and Finnish updated" : "Product saved with Finnish translation"
+        : `English saved. Finnish translation failed: ${result.translationError || "Please retry."}`);
+      return true;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not save the product");
+      return false;
+    }
+  };
+
+  const handleSaveCategory = async (draft: CategoryDraft) => {
+    try {
+      const heroUrls = await uploadAssets(draft.heroImage, `categories/${draft.slug}`);
+      const existing = categories.find((category) => category.id === draft.id);
+      const heroImageUrl = heroUrls[0] || existing?.heroImageUrl || "/images/hero-products.png";
+      const englishTranslation = {
+        locale: "en" as const,
+        name: draft.name.trim(),
+        heroTitle: draft.heroTitle.trim(),
+        heroDescription: draft.heroDescription.trim(),
+        metaTitle: `${draft.name.trim()} | Woittola Healthcare`,
+        metaDescription: draft.heroDescription.trim(),
+      };
+
+      const result = await invokeTranslation({
+        action: "save",
+        entityType: "category",
+        data: {
+          id: draft.id,
+          heroImageUrl,
+          isPublished: draft.isPublished,
+          name: englishTranslation.name,
+          heroTitle: englishTranslation.heroTitle,
+          heroDescription: englishTranslation.heroDescription,
+          metaTitle: englishTranslation.metaTitle,
+          metaDescription: englishTranslation.metaDescription,
+        },
+      });
+
+      const now = new Date().toISOString();
+      setCategories((current) => current.map((category) => category.id === draft.id ? {
+        ...category,
+        name: englishTranslation.name,
+        heroTitle: englishTranslation.heroTitle,
+        heroDescription: englishTranslation.heroDescription,
+        heroImageUrl,
+        isPublished: draft.isPublished,
+        translationStatus: result.translationStatus,
+        translationError: result.translationError ?? "",
+        translatedAt: result.translationStatus === "ready" ? now : category.translatedAt,
+        translationSourceUpdatedAt: now,
+        updatedAt: now,
+        translations: { ...category.translations, en: englishTranslation },
+      } : category));
+      setProducts((current) => current.map((product) => product.categoryId === draft.id
+        ? { ...product, category: englishTranslation.name, categoryName: englishTranslation.name }
+        : product));
+      setEditingCategory(null);
+      showToast(result.translationStatus === "ready"
+        ? "Category saved and Finnish updated"
+        : `English saved. Finnish translation failed: ${result.translationError || "Please retry."}`);
+      return true;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not save the category");
+      return false;
+    }
+  };
+
+  const handleRetryTranslation = async (entityType: "category" | "product", entityId: string) => {
+    const retryKey = `${entityType}:${entityId}`;
+    if (retryingTranslations.includes(retryKey)) return;
+    setRetryingTranslations((current) => [...current, retryKey]);
+    if (entityType === "category") {
+      setCategories((current) => current.map((category) => category.id === entityId
+        ? { ...category, translationStatus: "processing", translationError: "" }
+        : category));
+    } else {
+      setProducts((current) => current.map((product) => product.id === entityId
+        ? { ...product, translationStatus: "processing", translationError: "" }
+        : product));
+    }
+
+    try {
+      const result = await invokeTranslation({ action: "retry", entityType, entityId });
+      const statusUpdate = {
+        translationStatus: result.translationStatus,
+        translationError: result.translationError ?? "",
+        translatedAt: result.translationStatus === "ready" ? new Date().toISOString() : "",
+      };
+      if (entityType === "category") {
+        setCategories((current) => current.map((category) => category.id === entityId
+          ? { ...category, ...statusUpdate }
+          : category));
+      } else {
+        setProducts((current) => current.map((product) => product.id === entityId
+          ? { ...product, ...statusUpdate }
+          : product));
+      }
+      showToast(result.translationStatus === "ready"
+        ? "Finnish translation is ready"
+        : `Finnish translation failed: ${result.translationError || "Please retry."}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Translation retry failed";
+      if (entityType === "category") {
+        setCategories((current) => current.map((category) => category.id === entityId
+          ? { ...category, translationStatus: "failed", translationError: message }
+          : category));
+      } else {
+        setProducts((current) => current.map((product) => product.id === entityId
+          ? { ...product, translationStatus: "failed", translationError: message }
+          : product));
+      }
+      showToast(message);
+    } finally {
+      setRetryingTranslations((current) => current.filter((key) => key !== retryKey));
+    }
+  };
+
+  const handleDeleteProduct = async (product: DashboardProduct) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("products").delete().eq("id", product.id);
+    if (error) {
+      showToast(error.message);
+      return;
+    }
+    setProducts((current) => current.filter((item) => item.id !== product.id));
+    setDeleteProduct(null);
+    showToast("Product deleted from Supabase");
   };
 
   if (editingProduct !== undefined) {
@@ -556,6 +922,7 @@ export default function Dashboard() {
 
         {view === "products" ? (
           <div className="admin-page-content">
+            {databaseError ? <div className="admin-database-notice"><AlertTriangle aria-hidden="true" /><div><strong>Catalogue connection error</strong><p>{databaseError}</p></div></div> : null}
             <section className="admin-management-card" aria-labelledby="product-list-title">
               <div className="admin-management-heading">
                 <div><h2 id="product-list-title">All products</h2><p>{filteredProducts.length} product{filteredProducts.length === 1 ? "" : "s"} shown</p></div>
@@ -574,11 +941,19 @@ export default function Dashboard() {
                   {filteredProducts.map((product) => (
                     <article className="admin-product-row" key={product.id}>
                       <div className="admin-product-identity">
-                        <div><Image src={product.image} alt="" fill sizes="58px" unoptimized /></div>
+                        <div>{product.image ? <Image src={product.image} alt="" fill sizes="58px" unoptimized /> : <ImagePlus aria-hidden="true" />}</div>
                         <span><strong>{product.name}</strong><small>{product.type}</small></span>
                       </div>
                       <span className="admin-product-category">{product.category}</span>
-                      <span><span className={`admin-status ${product.status.toLowerCase()}`}><span />{product.status}</span></span>
+                      <span className="admin-product-statuses">
+                        <span className={`admin-status ${product.displayStatus.toLowerCase()}`}><span />{product.displayStatus}</span>
+                        <TranslationStatusBadge
+                          status={product.translationStatus}
+                          error={product.translationError}
+                          retrying={retryingTranslations.includes(`product:${product.id}`)}
+                          onRetry={() => handleRetryTranslation("product", product.id)}
+                        />
+                      </span>
                       <span className="admin-updated">{product.updated}</span>
                       <div className="admin-row-actions">
                         <button type="button" aria-label={`Edit ${product.name}`} onClick={() => setEditingProduct(product)}><Pencil aria-hidden="true" /></button>
@@ -595,28 +970,28 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="admin-page-content">
-            <div className="admin-category-layout">
-              <section className="admin-add-category-card" aria-labelledby="add-category-title">
-                <span><FolderPlus aria-hidden="true" /></span>
-                <div><p>New category</p><h2 id="add-category-title">Add a category</h2><small>Enter a clear category name. You can assign products to it afterward.</small></div>
-                <form onSubmit={(event) => { event.preventDefault(); const name = newCategory.trim(); if (!name) return; if (categories.some((category) => category.name.toLowerCase() === name.toLowerCase())) { showToast("That category already exists"); return; } setCategories((current) => [...current, { id: `${slugify(name)}-${Date.now()}`, name }]); setNewCategory(""); showToast("Category added locally"); }}>
-                  <label><span>Category name</span><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} placeholder="e.g. Examination Lights" autoFocus /></label>
-                  <button type="submit" disabled={!newCategory.trim()}><Plus aria-hidden="true" /> Add category</button>
-                </form>
-                <div className="admin-category-note"><Info aria-hidden="true" /><p>Later, this will save directly to Supabase and appear automatically in the product form and website navigation.</p></div>
-              </section>
-
+            {databaseError ? <div className="admin-database-notice"><AlertTriangle aria-hidden="true" /><div><strong>Catalogue connection error</strong><p>{databaseError}</p></div></div> : null}
+            <div className="admin-category-layout admin-category-layout-wide">
               <section className="admin-category-list-card" aria-labelledby="category-list-title">
-                <div><h2 id="category-list-title">Existing categories</h2><p>{categories.length} categories</p></div>
+                <div><h2 id="category-list-title">Product categories</h2><p>{categories.length} database-backed categories · write in English and translate automatically to Finnish</p></div>
                 <div className="admin-category-list">
                   {categories.map((category) => {
-                    const count = categoryCount(category.name);
+                    const count = categoryCount(category.id);
                     return (
                       <article key={category.id}>
                         <span className="admin-category-icon"><LayoutGrid aria-hidden="true" /></span>
-                        <div><strong>{category.name}</strong><small>{count} product{count === 1 ? "" : "s"}</small></div>
-                        <button type="button" aria-label={`Edit ${category.name}`} onClick={() => showToast("Category editing will connect to the database later")}><Pencil aria-hidden="true" /></button>
-                        <button className="danger" type="button" disabled={count > 0} title={count > 0 ? "Move or delete products before deleting this category" : "Delete category"} aria-label={`Delete ${category.name}`} onClick={() => { setCategories((current) => current.filter((item) => item.id !== category.id)); showToast("Category deleted locally"); }}><Trash2 aria-hidden="true" /></button>
+                        <div>
+                          <strong>{category.name}</strong>
+                          <small>{count} product{count === 1 ? "" : "s"} · {category.isPublished ? "Published" : "Hidden"}</small>
+                          <TranslationStatusBadge
+                            status={category.translationStatus}
+                            error={category.translationError}
+                            retrying={retryingTranslations.includes(`category:${category.id}`)}
+                            onRetry={() => handleRetryTranslation("category", category.id)}
+                          />
+                        </div>
+                        <Link href={`/catalogue/${category.slug}`} target="_blank" aria-label={`View ${category.name}`}><ExternalLink aria-hidden="true" /></Link>
+                        <button type="button" aria-label={`Edit ${category.name}`} onClick={() => setEditingCategory(category)}><Pencil aria-hidden="true" /></button>
                       </article>
                     );
                   })}
@@ -632,11 +1007,13 @@ export default function Dashboard() {
           <section className="admin-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-product-title">
             <span><AlertTriangle aria-hidden="true" /></span>
             <h2 id="delete-product-title">Delete {deleteProduct.name}?</h2>
-            <p>This removes the product from this dashboard preview. When the database is connected, this action will require confirmation and remove it from the website.</p>
-            <div><button type="button" onClick={() => setDeleteProduct(null)}>Cancel</button><button type="button" onClick={() => { setProducts((current) => current.filter((product) => product.id !== deleteProduct.id)); setDeleteProduct(null); showToast("Product deleted locally"); }}><Trash2 aria-hidden="true" /> Delete product</button></div>
+            <p>This permanently removes the product and its translations from the Supabase catalogue.</p>
+            <div><button type="button" onClick={() => setDeleteProduct(null)}>Cancel</button><button type="button" onClick={() => handleDeleteProduct(deleteProduct)}><Trash2 aria-hidden="true" /> Delete product</button></div>
           </section>
         </div>
       ) : null}
+
+      {editingCategory ? <CategoryEditor category={editingCategory} onCancel={() => setEditingCategory(null)} onSave={handleSaveCategory} /> : null}
 
       {toast ? <div className="admin-toast"><CircleCheck aria-hidden="true" /> {toast}</div> : null}
     </main>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   ChevronRight,
@@ -7,67 +8,50 @@ import {
   Headphones,
   Mail,
   PackageSearch,
-  Send,
 } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
+import ContactForm from "../components/ContactForm";
+import { getLocaleMessages } from "../locales/server";
 
-const supportOptions = [
-  {
-    icon: PackageSearch,
-    title: "Product guidance",
-    copy: "Tell us what your facility needs and we’ll help identify the right solution.",
-  },
-  {
-    icon: FileText,
-    title: "Quotes & projects",
-    copy: "Receive a tailored proposal for individual products or complete projects.",
-  },
-  {
-    icon: Headphones,
-    title: "After-sales support",
-    copy: "Contact our team for product information, documentation and ongoing support.",
-  },
-];
+export async function generateMetadata(): Promise<Metadata> {
+  const { messages } = await getLocaleMessages();
+  return { title: messages.metadata.contactTitle, description: messages.metadata.contactDescription };
+}
 
-export const metadata = {
-  title: "Contact & Support | Woittola",
-  description:
-    "Contact Woittola for product guidance, tailored healthcare equipment quotes and support.",
-};
+export default async function ContactPage() {
+  const { messages } = await getLocaleMessages();
+  const t = messages.contact;
+  const optionIcons = [PackageSearch, FileText, Headphones];
 
-export default function ContactPage() {
   return (
     <main className="contact-page">
       <SiteHeader />
 
       <section className="contact-hero" aria-labelledby="contact-title">
         <div className="contact-hero-shell">
-          <nav className="contact-breadcrumbs" aria-label="Breadcrumb">
-            <Link href="/">Home</Link>
+          <nav className="contact-breadcrumbs" aria-label={t.breadcrumb}>
+            <Link href="/">{messages.header.home}</Link>
             <ChevronRight aria-hidden="true" />
-            <span aria-current="page">Contact &amp; Support</span>
+            <span aria-current="page">{t.title}</span>
           </nav>
           <div className="contact-hero-copy">
-            <p className="contact-eyebrow">We’re here to help</p>
-            <h1 id="contact-title">Contact &amp; Support</h1>
-            <p>
-              Whether you need help choosing a product, a tailored quote or support with an
-              existing solution, our team will guide you to the right next step.
-            </p>
+            <p className="contact-eyebrow">{t.eyebrow}</p>
+            <h1 id="contact-title">{t.title}</h1>
+            <p>{t.lead}</p>
           </div>
-          <div className="contact-hero-meta" aria-label="Contact information">
-            <a href="mailto:contact@woittola.com">
+          <div className="contact-hero-meta" aria-label={t.informationAria}>
+            <a href="mailto:info@woittola.fi">
               <Mail aria-hidden="true" />
               <span>
-                Email our team
-                <strong>contact@woittola.com</strong>
+                {t.emailTeam}
+                <strong>info@woittola.fi</strong>
               </span>
             </a>
             <div>
               <Clock3 aria-hidden="true" />
               <span>
-                Response time
-                <strong>Usually within one business day</strong>
+                {t.responseTime}
+                <strong>{t.responseValue}</strong>
               </span>
             </div>
           </div>
@@ -76,16 +60,14 @@ export default function ContactPage() {
 
       <section className="contact-content" id="support-options">
         <div className="contact-support-column">
-          <p className="contact-section-label">How we can help</p>
-          <h2>Professional support from first question to final delivery.</h2>
-          <p className="contact-intro">
-            Share a few details about your facility and requirements. We’ll connect you with
-            the right product specialist.
-          </p>
+          <p className="contact-section-label">{t.sectionLabel}</p>
+          <h2>{t.sectionTitle}</h2>
+          <p className="contact-intro">{t.intro}</p>
 
           <div className="contact-support-list">
-            {supportOptions.map(({ icon: Icon, title, copy }) => (
-              <article className="contact-support-item" key={title}>
+            {t.options.map(({ title, copy }, index) => {
+              const Icon = optionIcons[index];
+              return <article className="contact-support-item" key={title}>
                 <div className="contact-support-icon">
                   <Icon aria-hidden="true" />
                 </div>
@@ -93,85 +75,23 @@ export default function ContactPage() {
                   <h3>{title}</h3>
                   <p>{copy}</p>
                 </div>
-              </article>
-            ))}
+              </article>;
+            })}
           </div>
 
           <Link className="contact-products-link" href="/catalogue">
-            Browse our products <ArrowRight aria-hidden="true" />
+            {t.browse} <ArrowRight aria-hidden="true" />
           </Link>
         </div>
 
         <div className="contact-form-card" id="contact-form">
           <div className="contact-form-heading">
-            <p>Send an enquiry</p>
-            <h2>How can we help?</h2>
-            <span>Fields marked with * are required.</span>
+            <p>{t.sendEnquiry}</p>
+            <h2>{t.formTitle}</h2>
+            <span>{t.requiredNote}</span>
           </div>
 
-          <form
-            className="contact-form"
-            action="mailto:contact@woittola.com?subject=Website%20enquiry"
-            method="post"
-            encType="text/plain"
-          >
-            <div className="contact-form-row">
-              <label>
-                Full name *
-                <input name="Full name" type="text" autoComplete="name" required />
-              </label>
-              <label>
-                Organisation
-                <input name="Organisation" type="text" autoComplete="organization" />
-              </label>
-            </div>
-
-            <div className="contact-form-row">
-              <label>
-                Email address *
-                <input name="Email" type="email" autoComplete="email" required />
-              </label>
-              <label>
-                Phone number
-                <input name="Phone" type="tel" autoComplete="tel" />
-              </label>
-            </div>
-
-            <label>
-              What can we help with? *
-              <select name="Enquiry type" defaultValue="" required>
-                <option value="" disabled>
-                  Select an enquiry type
-                </option>
-                <option>Product guidance</option>
-                <option>Request a quote</option>
-                <option>Project enquiry</option>
-                <option>After-sales support</option>
-                <option>General enquiry</option>
-              </select>
-            </label>
-
-            <label>
-              Your message *
-              <textarea
-                name="Message"
-                rows={6}
-                placeholder="Tell us about the products, quantities, facility or support you need."
-                required
-              />
-            </label>
-
-            <label className="contact-consent">
-              <input name="Consent" type="checkbox" required />
-              <span>
-                I agree that Woittola may use these details to respond to my enquiry. *
-              </span>
-            </label>
-
-            <button className="contact-submit" type="submit">
-              Send enquiry <Send aria-hidden="true" />
-            </button>
-          </form>
+          <ContactForm ui={t} />
         </div>
       </section>
     </main>

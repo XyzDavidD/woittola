@@ -1,33 +1,34 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowRight, Factory, Globe2 } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import { partners } from "../data/partners";
+import { getLocaleMessages } from "../locales/server";
 
-export const metadata = {
-  title: "Partners | Woittola Healthcare",
-  description:
-    "Meet the European healthcare furniture and medical equipment manufacturers represented by Woittola.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { messages } = await getLocaleMessages();
+  return { title: messages.metadata.partnersTitle, description: messages.metadata.partnersDescription };
+}
 
-export default function PartnersPage() {
+export default async function PartnersPage() {
+  const { messages } = await getLocaleMessages();
+  const t = messages.partnersPage;
+
   return (
     <main className="home-page info-page">
       <SiteHeader activePage="partners" />
 
       <section className="info-hero partners-page-hero">
         <div className="info-page-shell">
-          <p className="info-eyebrow">Our Partners</p>
-          <h1>Trusted specialists from across Europe.</h1>
-          <p className="info-lead">
-            We partner with focused manufacturers whose products support better clinical
-            workflows, patient comfort and dependable day-to-day care.
-          </p>
-          <div className="partner-hero-points" aria-label="Partnership strengths">
+          <p className="info-eyebrow">{t.eyebrow}</p>
+          <h1>{t.title}</h1>
+          <p className="info-lead">{t.lead}</p>
+          <div className="partner-hero-points" aria-label={t.strengthsAria}>
             <span>
-              <Globe2 aria-hidden="true" /> European manufacturers
+              <Globe2 aria-hidden="true" /> {t.european}
             </span>
             <span>
-              <Factory aria-hidden="true" /> Specialised product expertise
+              <Factory aria-hidden="true" /> {t.expertise}
             </span>
           </div>
         </div>
@@ -35,8 +36,8 @@ export default function PartnersPage() {
 
       <section className="partners-page-content info-page-shell" aria-labelledby="partner-list-title">
         <div className="info-section-heading">
-          <p>Our network</p>
-          <h2 id="partner-list-title">Manufacturing partners</h2>
+          <p>{t.network}</p>
+          <h2 id="partner-list-title">{t.manufacturers}</h2>
         </div>
         <div className="partners-page-grid">
           {partners.map((partner) => (
@@ -48,11 +49,11 @@ export default function PartnersPage() {
         </div>
         <div className="partners-page-cta">
           <div>
-            <h2>Looking for a specific healthcare solution?</h2>
-            <p>Tell us what you need and we’ll help identify the right partner and product.</p>
+            <h2>{t.ctaTitle}</h2>
+            <p>{t.ctaCopy}</p>
           </div>
           <Link className="button button-primary" href="/contact#contact-form">
-            Request a Quote <ArrowRight aria-hidden="true" />
+            {t.quote} <ArrowRight aria-hidden="true" />
           </Link>
         </div>
       </section>

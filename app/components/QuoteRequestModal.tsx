@@ -1,15 +1,49 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { PackageCheck, Send, X } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { CheckCircle2, PackageCheck, Send, X } from "lucide-react";
+import type { DeepTranslated, Messages } from "../locales";
 
 type QuoteRequestModalProps = {
   productName: string;
+  ui: DeepTranslated<Messages>["quote"];
 };
 
-export default function QuoteRequestModal({ productName }: QuoteRequestModalProps) {
+export default function QuoteRequestModal({ productName, ui }: QuoteRequestModalProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const firstInputRef = useRef<HTMLInputElement>(null);
+
+  async function submitQuote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    setStatus("sending");
+
+    try {
+      const response = await fetch("/api/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "quote",
+          product: productName,
+          name: formData.get("name"),
+          organisation: formData.get("organisation"),
+          email: formData.get("email"),
+          quantity: formData.get("quantity"),
+          message: formData.get("message"),
+          website: formData.get("website"),
+        }),
+      });
+
+      if (!response.ok) throw new Error("Quote request failed");
+
+      form.reset();
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return;
@@ -32,8 +66,11 @@ export default function QuoteRequestModal({ productName }: QuoteRequestModalProp
 
   return (
     <>
-      <button className="product-detail-quote" type="button" onClick={() => setIsOpen(true)}>
-        Request a Quote
+      <button className="product-detail-quote" type="button" onClick={() => {
+        setStatus("idle");
+        setIsOpen(true);
+      }}>
+        {ui.trigger}
       </button>
 
       {isOpen ? (
@@ -52,7 +89,7 @@ export default function QuoteRequestModal({ productName }: QuoteRequestModalProp
             <button
               className="quote-modal-close"
               type="button"
-              aria-label="Close quote request"
+              aria-label={ui.close}
               onClick={() => setIsOpen(false)}
             >
               <X aria-hidden="true" />
@@ -63,63 +100,68 @@ export default function QuoteRequestModal({ productName }: QuoteRequestModalProp
                 <PackageCheck aria-hidden="true" />
               </span>
               <div>
-                <p>Product enquiry</p>
-                <h2 id="quote-modal-title">Request a Quote</h2>
+                <p>{ui.eyebrow}</p>
+                <h2 id="quote-modal-title">{ui.title}</h2>
               </div>
             </div>
 
             <div className="quote-modal-product">
-              <span>Selected product</span>
+              <span>{ui.selected}</span>
               <strong>{productName}</strong>
             </div>
 
-            <form
-              className="quote-modal-form"
-              action={`mailto:contact@woittola.com?subject=${encodeURIComponent(
-                `Quote request for ${productName}`,
-              )}`}
-              method="post"
-              encType="text/plain"
-            >
-              <input name="Product" type="hidden" value={productName} />
+            <form className="quote-modal-form" onSubmit={submitQuote}>
 
               <div className="quote-modal-form-row">
                 <label>
-                  Full name *
-                  <input ref={firstInputRef} name="Full name" type="text" autoComplete="name" required />
+                  {ui.fullName}
+                  <input ref={firstInputRef} name="name" type="text" autoComplete="name" maxLength={120} required />
                 </label>
                 <label>
-                  Organisation
-                  <input name="Organisation" type="text" autoComplete="organization" />
+                  {ui.organisation}
+                  <input name="organisation" type="text" autoComplete="organization" maxLength={160} />
                 </label>
               </div>
 
               <div className="quote-modal-form-row">
                 <label>
-                  Email address *
-                  <input name="Email" type="email" autoComplete="email" required />
+                  {ui.email}
+                  <input name="email" type="email" autoComplete="email" maxLength={254} required />
                 </label>
                 <label>
-                  Quantity
-                  <input name="Quantity" type="number" min="1" defaultValue="1" />
+                  {ui.quantity}
+                  <input name="quantity" type="number" min="1" max="100000" defaultValue="1" />
                 </label>
               </div>
 
               <label>
-                Additional details
+                {ui.details}
                 <textarea
-                  name="Message"
+                  name="message"
                   rows={4}
-                  placeholder="Tell us about your facility, preferred configuration or delivery requirements."
+                  maxLength={5000}
+                  placeholder={ui.placeholder}
                 />
               </label>
 
+              <label className="form-honeypot" aria-hidden="true">
+                Website
+                <input name="website" type="text" tabIndex={-1} autoComplete="off" />
+              </label>
+
+              {status === "success" ? (
+                <p className="form-status form-status-success" role="status">
+                  <CheckCircle2 aria-hidden="true" /> {ui.success}
+                </p>
+              ) : null}
+              {status === "error" ? <p className="form-status form-status-error" role="alert">{ui.error}</p> : null}
+
               <div className="quote-modal-actions">
                 <button className="quote-modal-cancel" type="button" onClick={() => setIsOpen(false)}>
-                  Cancel
+                  {ui.cancel}
                 </button>
-                <button className="quote-modal-submit" type="submit">
-                  Send Request <Send aria-hidden="true" />
+                <button className="quote-modal-submit" type="submit" disabled={status === "sending" || status === "success"}>
+                  {status === "sending" ? ui.sending : ui.send} <Send aria-hidden="true" />
                 </button>
               </div>
             </form>

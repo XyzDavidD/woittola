@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@fontsource/lato/400.css";
 import "@fontsource/lato/700.css";
 import "./globals.css";
+import { getLocaleMessages } from "./locales/server";
 
 const deployedUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -45,13 +46,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { locale } = await getLocaleMessages();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body>{children}</body>
     </html>
   );

@@ -1,66 +1,67 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { useState } from "react";
-
-const galleryImages = Array.from({ length: 5 }, (_, index) => ({
-  id: index,
-  src: "/images/chair2.png",
-}));
+import type { DeepTranslated, Messages } from "../../locales";
+import { interpolate } from "../../locales";
 
 type ProductGalleryProps = {
   productName: string;
+  images: string[];
+  ui: DeepTranslated<Messages>["product"];
 };
 
-export default function ProductGallery({ productName }: ProductGalleryProps) {
+export default function ProductGallery({ productName, images, ui }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const galleryImages = images.filter(Boolean);
 
   const changeImage = (direction: number) => {
+    if (!galleryImages.length) return;
     setActiveIndex((current) => (current + direction + galleryImages.length) % galleryImages.length);
   };
 
   return (
     <div className="product-gallery">
       <div className="product-gallery-main">
-        <Image
-          src={galleryImages[activeIndex].src}
-          alt={`${productName} treatment chair view ${activeIndex + 1}`}
+        {galleryImages.length ? <Image
+          src={galleryImages[activeIndex]}
+          alt={interpolate(ui.viewAlt, { product: productName, number: activeIndex + 1 })}
           fill
           priority
           sizes="(min-width: 1000px) 720px, 92vw"
           unoptimized
-        />
-        <button
+        /> : <span className="product-gallery-empty"><ImageOff aria-hidden="true" /> {ui.galleryEmpty}</span>}
+        {galleryImages.length > 1 ? <button
           className="product-gallery-arrow product-gallery-arrow-left"
           type="button"
-          aria-label="Previous product image"
+          aria-label={ui.previousImage}
           onClick={() => changeImage(-1)}
         >
           <ChevronLeft aria-hidden="true" />
-        </button>
-        <button
+        </button> : null}
+        {galleryImages.length > 1 ? <button
           className="product-gallery-arrow product-gallery-arrow-right"
           type="button"
-          aria-label="Next product image"
+          aria-label={ui.nextImage}
           onClick={() => changeImage(1)}
         >
           <ChevronRight aria-hidden="true" />
-        </button>
+        </button> : null}
       </div>
 
-      <div className="product-gallery-thumbnails" aria-label="Product image gallery">
+      {galleryImages.length > 1 ? <div className="product-gallery-thumbnails" aria-label={ui.galleryAria}>
         {galleryImages.map((image, index) => (
           <button
             className={index === activeIndex ? "active" : ""}
             type="button"
-            aria-label={`Show product image ${index + 1}`}
+            aria-label={interpolate(ui.showImage, { number: index + 1 })}
             aria-pressed={index === activeIndex}
             onClick={() => setActiveIndex(index)}
-            key={image.id}
+            key={image}
           >
             <Image
-              src={image.src}
+              src={image}
               alt=""
               fill
               sizes="130px"
@@ -68,7 +69,7 @@ export default function ProductGallery({ productName }: ProductGalleryProps) {
             />
           </button>
         ))}
-      </div>
+      </div> : null}
     </div>
   );
 }

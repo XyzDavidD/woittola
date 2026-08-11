@@ -1,150 +1,83 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Activity,
-  ArrowLeft,
-  ChevronRight,
-  CirclePlay,
-  ClipboardCheck,
-  Download,
-  Droplets,
-  HandHeart,
-  Syringe,
-} from "lucide-react";
+import { notFound } from "next/navigation";
+import { ArrowLeft, ChevronRight, ClipboardCheck, Download, Stethoscope } from "lucide-react";
 import SiteHeader from "../../components/SiteHeader";
 import QuoteRequestModal from "../../components/QuoteRequestModal";
 import ProductGallery from "./ProductGallery";
 import ProductInformation from "./ProductInformation";
+import { getPublicProduct } from "@/lib/catalogue/queries";
+import { getLocaleMessages } from "../../locales/server";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-const productTypes = [
-  { prefix: "medseat-pro", name: "MedSeat Pro", type: "Treatment Chair" },
-  { prefix: "medseat-classic", name: "MedSeat Classic", type: "Infusion Chair" },
-  { prefix: "relax-3", name: "Relax 3", type: "Dialysis Chair" },
-  { prefix: "comfort-plus", name: "Comfort Plus", type: "Chemotherapy Chair" },
-  { prefix: "bloodline", name: "BloodLine", type: "Blood Collection Chair" },
-  { prefix: "medseat-acplus", name: "MedSeat AC+", type: "Procedure Chair" },
-];
+export const dynamic = "force-dynamic";
 
-const applications = [
-  { label: "Dialysis", icon: Droplets },
-  { label: "Infusion Therapy", icon: Syringe },
-  { label: "Chemotherapy", icon: Activity },
-  { label: "Blood Collection", icon: HandHeart },
-  { label: "Outpatient / Procedure", icon: ClipboardCheck },
-];
-
-function getProduct(slug: string) {
-  const product = productTypes.find(({ prefix }) => slug.startsWith(prefix)) ?? productTypes[0];
-  const routeNumber = Number(slug.match(/-(\d+)$/)?.[1] ?? "1");
-  const edition = Math.floor((Math.max(routeNumber, 1) - 1) / productTypes.length) + 1;
-
-  return {
-    ...product,
-    name: edition === 1 ? product.name : `${product.name} ${edition}`,
-  };
-}
-
-export async function generateMetadata({ params }: ProductPageProps) {
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const { locale, messages } = await getLocaleMessages();
+  const product = await getPublicProduct(slug, locale);
+  if (!product) return { title: messages.product.fallbackTitle };
 
   return {
-    title: `${product.name} | Woittola Healthcare`,
-    description: `${product.name} ${product.type} for professional healthcare applications.`,
+    title: `${product.translation.name} | Woittola Healthcare`,
+    description: product.translation.description,
   };
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const { locale, messages } = await getLocaleMessages();
+  const product = await getPublicProduct(slug, locale);
+  if (!product) notFound();
+
+  const images = [product.primaryImageUrl, ...product.galleryUrls].filter((value, index, values) => value && values.indexOf(value) === index);
 
   return (
     <main className="home-page product-detail-page">
       <SiteHeader activePage="products" />
 
       <div className="product-detail-shell">
-        <nav className="product-detail-breadcrumbs" aria-label="Breadcrumb">
-          <Link href="/">Home</Link>
-          <ChevronRight aria-hidden="true" />
-          <Link href="/catalogue">Products</Link>
-          <ChevronRight aria-hidden="true" />
-          <Link href="/catalogue/treatment-chairs">Treatment Chairs</Link>
-          <ChevronRight aria-hidden="true" />
-          <span aria-current="page">{product.name}</span>
+        <nav className="product-detail-breadcrumbs" aria-label={messages.product.breadcrumb}>
+          <Link href="/">{messages.header.home}</Link><ChevronRight aria-hidden="true" />
+          <Link href="/catalogue">{messages.header.products}</Link><ChevronRight aria-hidden="true" />
+          <Link href={`/catalogue/${product.categorySlug}`}>{product.categoryName}</Link><ChevronRight aria-hidden="true" />
+          <span aria-current="page">{product.translation.name}</span>
         </nav>
 
-        <Link className="product-back-link" href="/catalogue/treatment-chairs">
-          <ArrowLeft aria-hidden="true" /> Back to Treatment Chairs
-        </Link>
+        <Link className="product-back-link" href={`/catalogue/${product.categorySlug}`}><ArrowLeft aria-hidden="true" /> {messages.product.backTo} {product.categoryName}</Link>
 
         <div className="product-detail-layout">
-          <ProductGallery productName={product.name} />
+          <ProductGallery productName={product.translation.name} images={images} ui={messages.product} />
 
           <section className="product-detail-info" aria-labelledby="product-detail-title">
-            <h1 id="product-detail-title">{product.name}</h1>
-            <p className="product-detail-type">{product.type}</p>
-            <p className="product-detail-description">
-              Versatile and ergonomic {product.type.toLowerCase()} designed for dialysis,
-              infusion therapy, chemotherapy and blood collection. Ensures maximum patient
-              comfort and an easy workflow for healthcare professionals.
-            </p>
+            {product.brand ? <p className="product-detail-brand">{product.brand}</p> : null}
+            <h1 id="product-detail-title">{product.translation.name}</h1>
+            {product.translation.productTypeLabel || product.productType ? <p className="product-detail-type">{product.translation.productTypeLabel || product.productType}</p> : null}
+            <p className="product-detail-description">{product.translation.description}</p>
 
-            <div className="product-detail-applications">
-              <h2>Applications</h2>
+            {product.applications.length ? <div className="product-detail-applications">
+              <h2>{messages.product.applications}</h2>
               <div className="product-detail-application-grid">
-                {applications.map(({ label, icon: Icon }) => (
-                  <div className="product-detail-application" key={label}>
-                    <Icon aria-hidden="true" />
-                    <span>{label}</span>
-                  </div>
-                ))}
+                {product.applications.map((application, index) => <div className="product-detail-application" key={application}><Stethoscope aria-hidden="true" /><span>{product.translation.applicationLabels[index] || application}</span></div>)}
               </div>
-            </div>
+            </div> : null}
 
             <div className="product-detail-actions">
-              <QuoteRequestModal productName={product.name} />
-              <a className="product-detail-brochure" href="#product-detail-title">
-                <Download aria-hidden="true" /> Download Brochure
-              </a>
+              <QuoteRequestModal productName={product.translation.name} ui={messages.quote} />
+              {product.brochureUrl ? <a className="product-detail-brochure" href={product.brochureUrl} target="_blank" rel="noreferrer"><Download aria-hidden="true" /> {messages.product.downloadBrochure}</a> : null}
             </div>
           </section>
         </div>
 
-        <section className="product-video-showcase" aria-labelledby="product-video-title">
-          <div className="product-video-copy">
-            <span className="product-video-eyebrow">
-              <CirclePlay aria-hidden="true" /> Product demonstration
-            </span>
-            <h2 id="product-video-title">See clinical seating in action.</h2>
-            <p>
-              Explore how adjustable clinical seating supports safe patient positioning,
-              smooth movement and a more efficient workflow for healthcare professionals.
-            </p>
-            <div className="product-video-notes" aria-label="Video highlights">
-              <span>Patient positioning</span>
-              <span>Caregiver access</span>
-              <span>Clinical mobility</span>
-            </div>
-          </div>
+        {product.videoUrl ? <section className="product-video-showcase" aria-labelledby="product-video-title">
+          <div className="product-video-copy"><span className="product-video-eyebrow"><ClipboardCheck aria-hidden="true" /> {messages.product.demonstration}</span><h2 id="product-video-title">{messages.product.seeInActionPrefix} {product.translation.name} {messages.product.seeInActionSuffix}</h2><p>{messages.product.demonstrationCopy}</p></div>
+          <div className="product-video-card"><div className="product-video-frame"><video controls preload="metadata"><source src={product.videoUrl} /></video></div></div>
+        </section> : null}
 
-          <div className="product-video-card">
-            <div className="product-video-frame">
-              <iframe
-                src="https://www.youtube-nocookie.com/embed/aAZm3LEU8-8?rel=0&modestbranding=1"
-                title="Clinical treatment chair demonstration"
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        </section>
-
-        <ProductInformation productName={product.name} />
+        <ProductInformation productName={product.translation.name} content={product.translation} brochureUrl={product.brochureUrl} technicalSheetUrl={product.technicalSheetUrl} ui={messages.product} />
       </div>
     </main>
   );

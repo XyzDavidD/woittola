@@ -168,6 +168,40 @@
   stroke-width: 2.2;
 }
 
+.mobileRoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 2px 2px;
+  color: #66778a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mobileRoot > div {
+  display: flex;
+  gap: 7px;
+}
+
+.mobileRoot button {
+  width: 43px;
+  height: 34px;
+  border: 1px solid #d9e2eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #536579;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mobileRoot button.mobileActive {
+  border-color: #0b65b1;
+  background: #eaf3fc;
+  color: #073d78;
+  box-shadow: inset 0 0 0 1px #0b65b1;
+}
+
 @keyframes menu-in {
   from {
     opacity: 0;

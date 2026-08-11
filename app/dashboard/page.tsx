@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Dashboard from "./Dashboard";
 import { isAdminUser, isSupabaseConfigured } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminCatalogueData } from "@/lib/catalogue/queries";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -23,5 +24,7 @@ export default async function DashboardPage() {
 
   if (!isAdminUser(user?.id)) redirect("/dashboard/login");
 
-  return <Dashboard />;
+  const catalogue = await getAdminCatalogueData(supabase);
+
+  return <Dashboard initialCategories={catalogue.categories} initialProducts={catalogue.products} databaseError={catalogue.error} />;
 }

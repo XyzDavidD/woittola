@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import {
   Accessibility,
@@ -19,78 +20,71 @@ import {
 } from "lucide-react";
 import SiteHeader from "./components/SiteHeader";
 import { partners } from "./data/partners";
+import { getLocaleMessages } from "./locales/server";
 
 type Category = {
-  title: string;
+  slug: keyof typeof import("./locales/en").en.home.primaryCategories;
   maker: string;
   image: string;
   imageClass: string;
   accent: string;
   icon: LucideIcon;
-  products: string[];
 };
 
 const categories: Category[] = [
   {
-    title: "Patient Chairs",
+    slug: "patient-chairs",
     maker: "Haelvoet",
     image: "/images/chair1.png",
     imageClass: "chair-one",
     accent: "#087d68",
     icon: Armchair,
-    products: ["Care Chairs", "Ward Chairs", "Rehabilitation Chairs", "Geriatric Chairs"],
   },
   {
-    title: "Treatment Chairs",
+    slug: "treatment-chairs",
     maker: "Greiner",
     image: "/images/chair2.png",
     imageClass: "chair-two",
     accent: "#063b91",
     icon: Accessibility,
-    products: [
-      "Infusion Chairs",
-      "Chemotherapy Chairs",
-      "Dialysis Chairs",
-      "Blood Collection Chairs",
-      "Procedure Chairs",
-    ],
   },
   {
-    title: "Gynecology",
+    slug: "gynecology",
     maker: "Promotal",
     image: "/images/chair3.png",
     imageClass: "chair-three",
     accent: "#7a2396",
     icon: Venus,
-    products: ["Examination Chairs", "Procedure Chairs"],
   },
   {
-    title: "Patient Stretchers",
+    slug: "patient-stretchers",
     maker: "Novak-M",
     image: "/images/chair3.png",
     imageClass: "chair-three",
     accent: "#008b99",
     icon: Bed,
-    products: ["Hydraulic Stretchers", "Electric Stretchers", "X-ray Compatible Stretchers"],
   },
   {
-    title: "Medical Carts",
+    slug: "medical-carts",
     maker: "La Pastilla",
     image: "/images/chair3.png",
     imageClass: "chair-three",
     accent: "#c81d2b",
     icon: Hospital,
-    products: ["Emergency Carts", "Anaesthesia Carts", "Dressing Carts", "Treatment Carts"],
   },
 ];
 
-export const metadata = {
-  title: "Professional Healthcare Furniture & Equipment | Woittola",
-  description:
-    "High-quality healthcare furniture and equipment from leading European manufacturers.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { messages } = await getLocaleMessages();
+  return { title: messages.metadata.homeTitle, description: messages.metadata.homeDescription };
+}
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { messages } = await getLocaleMessages();
+  const t = messages.home;
+  const trustIcons = [ShieldCheck, BadgeCheck, CirclePlus];
+  const whyIcons = [ShieldCheck, UsersRound, Headphones, FileText];
+
   return (
     <main className="home-page">
       <SiteHeader activePage="home" />
@@ -100,64 +94,48 @@ export default function HomePage() {
         <div className="hero-inner">
           <div className="hero-copy">
             <h1>
-              Professional
+              {t.hero.title[0]}
               <br />
-              Healthcare
+              {t.hero.title[1]}
               <br />
-              Furniture &amp; Equipment
+              {t.hero.title[2]}
             </h1>
             <p>
-              High-quality solutions from leading European manufacturers.
-              <br className="desktop-break" /> Designed for patients. Built for professionals.
+              {t.hero.description}
+              <br className="desktop-break" /> {t.hero.descriptionSecond}
             </p>
 
             <div className="hero-actions">
               <Link className="button button-primary" href="/catalogue">
-                Explore Products
+                {t.hero.explore}
               </Link>
               <Link className="button button-secondary" href="/contact#contact-form">
-                Request a Quote
+                {t.hero.quote}
               </Link>
             </div>
 
-            <div className="trust-list" aria-label="Our commitments">
-              <div className="trust-item">
-                <ShieldCheck aria-hidden="true" />
-                <span>
-                  Trusted European
-                  <br /> Manufacturers
-                </span>
-              </div>
-              <div className="trust-item">
-                <BadgeCheck aria-hidden="true" />
-                <span>
-                  High Quality
-                  <br /> &amp; Durability
-                </span>
-              </div>
-              <div className="trust-item">
-                <CirclePlus aria-hidden="true" />
-                <span>
-                  Designed for
-                  <br /> Healthcare Professionals
-                </span>
-              </div>
+            <div className="trust-list" aria-label={t.hero.commitments}>
+              {t.hero.trust.map((label, index) => {
+                const Icon = trustIcons[index];
+                return <div className="trust-item" key={label}><Icon aria-hidden="true" /><span>{label}</span></div>;
+              })}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="category-section" aria-label="Product categories">
+      <section className="category-section" aria-label={t.categorySectionAria}>
         <div className="category-grid">
           {categories.map((category) => {
             const Icon = category.icon;
+            const title = messages.categoryNames[category.slug];
+            const products = t.primaryCategories[category.slug].products;
 
-            return (
-              <article className="category-card" key={category.title}>
+            return <article className="category-card" key={category.slug}>
                 <div className={`category-image ${category.imageClass}`}>
                   <Image
                     src={category.image}
-                    alt={`${category.title} by ${category.maker}`}
+                    alt={`${title} ${t.by} ${category.maker}`}
                     fill
                     sizes="(min-width: 1100px) 220px, (min-width: 640px) 45vw, 90vw"
                     loading="eager"
@@ -170,24 +148,23 @@ export default function HomePage() {
 
                 <div className="category-content">
                   <div>
-                    <h2>{category.title}</h2>
-                    <p className="maker">by {category.maker}</p>
+                    <h2>{title}</h2>
+                    <p className="maker">{t.by} {category.maker}</p>
                     <ul>
-                      {category.products.map((product) => (
+                      {products.map((product) => (
                         <li key={product}>{product}</li>
                       ))}
                     </ul>
                   </div>
                   <Link
                     className="category-link"
-                    href="/catalogue/treatment-chairs"
+                    href={`/catalogue/${category.slug}`}
                     style={{ color: category.accent }}
                   >
-                    View products <ArrowRight size={17} strokeWidth={1.8} aria-hidden="true" />
+                    {t.viewProducts} <ArrowRight size={17} strokeWidth={1.8} aria-hidden="true" />
                   </Link>
                 </div>
-              </article>
-            );
+              </article>;
           })}
         </div>
 
@@ -196,7 +173,7 @@ export default function HomePage() {
             <div className="secondary-media medical-table-media">
               <Image
                 src="/images/medical-table-generated.png"
-                alt="Medical examination table"
+                alt={t.secondary.medicalTables.imageAlt}
                 fill
                 sizes="(min-width: 1100px) 300px, (min-width: 640px) 45vw, 90vw"
                 style={{ objectFit: "contain", objectPosition: "center" }}
@@ -207,16 +184,13 @@ export default function HomePage() {
               </div>
             </div>
             <div className="secondary-content">
-              <h2>Medical Tables</h2>
-              <p className="secondary-maker">by AGA</p>
+              <h2>{t.secondary.medicalTables.title}</h2>
+              <p className="secondary-maker">{t.secondary.medicalTables.subtitle}</p>
               <ul>
-                <li>Examination Tables</li>
-                <li>Ultrasound Tables</li>
-                <li>Tilt Tables</li>
-                <li>Radiology Tables</li>
+                {t.secondary.medicalTables.products.map((product) => <li key={product}>{product}</li>)}
               </ul>
-              <Link className="secondary-link teal-link" href="/catalogue/treatment-chairs">
-                View products <ArrowRight size={17} aria-hidden="true" />
+              <Link className="secondary-link teal-link" href="/catalogue/medical-tables">
+                {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </article>
@@ -226,15 +200,13 @@ export default function HomePage() {
               <Ear size={54} strokeWidth={1.45} aria-hidden="true" />
             </div>
             <div className="coming-content">
-              <h2>ENT Solutions</h2>
-              <p className="secondary-maker">by Otopront</p>
+              <h2>{t.secondary.ent.title}</h2>
+              <p className="secondary-maker">{t.secondary.ent.subtitle}</p>
               <div className="coming-divider" />
-              <p className="coming-label">Coming Soon</p>
-              <p className="coming-description">
-                Advanced ENT chairs, treatment units and equipment solutions.
-              </p>
+              <p className="coming-label">{t.comingSoon}</p>
+              <p className="coming-description">{t.secondary.ent.description}</p>
               <Link className="secondary-link" href="/catalogue">
-                Learn more <ArrowRight size={17} aria-hidden="true" />
+                {t.learnMore} <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </article>
@@ -243,7 +215,7 @@ export default function HomePage() {
             <div className="secondary-media work-stools-media">
               <Image
                 src="/images/work-stool.jpg"
-                alt="Chrome height-adjustable healthcare work stool"
+                alt={t.secondary.stools.imageAlt}
                 fill
                 sizes="(min-width: 1100px) 220px, (min-width: 640px) 45vw, 90vw"
                 unoptimized
@@ -253,15 +225,13 @@ export default function HomePage() {
               </div>
             </div>
             <div className="secondary-content">
-              <h2>Work Stools</h2>
-              <p className="secondary-maker">Professional seating</p>
+              <h2>{t.secondary.stools.title}</h2>
+              <p className="secondary-maker">{t.secondary.stools.subtitle}</p>
               <ul>
-                <li>Medical Stools</li>
-                <li>Operator Stools</li>
-                <li>Height-adjustable Seating</li>
+                {t.secondary.stools.products.map((product) => <li key={product}>{product}</li>)}
               </ul>
-              <Link className="secondary-link navy-link" href="/catalogue/treatment-chairs">
-                View products <ArrowRight size={17} aria-hidden="true" />
+              <Link className="secondary-link navy-link" href="/catalogue/work-stools">
+                {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </article>
@@ -271,13 +241,13 @@ export default function HomePage() {
               <Baby size={54} strokeWidth={1.45} aria-hidden="true" />
             </div>
             <div className="coming-content">
-              <h2>Maternity</h2>
-              <p className="secondary-maker">by Famed</p>
+              <h2>{t.secondary.maternity.title}</h2>
+              <p className="secondary-maker">{t.secondary.maternity.subtitle}</p>
               <div className="coming-divider" />
-              <p className="coming-label">Coming Soon</p>
-              <p className="coming-description">Delivery beds, baby cots and maternity solutions.</p>
+              <p className="coming-label">{t.comingSoon}</p>
+              <p className="coming-description">{t.secondary.maternity.description}</p>
               <Link className="secondary-link" href="/catalogue">
-                Learn more <ArrowRight size={17} aria-hidden="true" />
+                {t.learnMore} <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </article>
@@ -286,7 +256,7 @@ export default function HomePage() {
             <div className="secondary-media protection-media">
               <Image
                 src="/images/face-protection-generated.png"
-                alt="Clear medical face shield"
+                alt={t.secondary.protection.imageAlt}
                 fill
                 sizes="(min-width: 1100px) 300px, (min-width: 640px) 45vw, 90vw"
                 unoptimized
@@ -296,15 +266,13 @@ export default function HomePage() {
               </div>
             </div>
             <div className="secondary-content compact-secondary-content">
-              <h2>Face Protection</h2>
-              <p className="secondary-maker">by MeGUARD</p>
+              <h2>{t.secondary.protection.title}</h2>
+              <p className="secondary-maker">{t.secondary.protection.subtitle}</p>
               <ul>
-                <li>Face Shields</li>
-                <li>Protective Films</li>
-                <li>Accessories</li>
+                {t.secondary.protection.products.map((product) => <li key={product}>{product}</li>)}
               </ul>
-              <Link className="secondary-link navy-link" href="/catalogue/treatment-chairs">
-                View products <ArrowRight size={17} aria-hidden="true" />
+              <Link className="secondary-link navy-link" href="/catalogue/face-protection">
+                {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </article>
@@ -313,42 +281,18 @@ export default function HomePage() {
 
       <section className="why-section" id="about-us" aria-labelledby="why-title">
         <h2 className="section-title" id="why-title">
-          <span>Why Choose Woittola?</span>
+          <span>{t.why.title}</span>
         </h2>
         <div className="why-panel">
-          <article className="why-item">
-            <ShieldCheck aria-hidden="true" />
-            <div>
-              <h3>Selected European Manufacturers</h3>
-              <p>We work with leading specialists in their fields.</p>
-            </div>
-          </article>
-          <article className="why-item">
-            <UsersRound aria-hidden="true" />
-            <div>
-              <h3>Specialised Solutions</h3>
-              <p>Products designed for specific medical applications.</p>
-            </div>
-          </article>
-          <article className="why-item">
-            <Headphones aria-hidden="true" />
-            <div>
-              <h3>Expert Product Support</h3>
-              <p>We help you find the right solution for your needs.</p>
-            </div>
-          </article>
-          <article className="why-item">
-            <FileText aria-hidden="true" />
-            <div>
-              <h3>Tailored Quotes</h3>
-              <p>Request a quote and receive a personalised offer.</p>
-            </div>
-          </article>
+          {t.why.items.map((item, index) => {
+            const Icon = whyIcons[index];
+            return <article className="why-item" key={item.title}><Icon aria-hidden="true" /><div><h3>{item.title}</h3><p>{item.copy}</p></div></article>;
+          })}
         </div>
       </section>
 
       <section className="partners-section" id="partners" aria-labelledby="partners-title">
-        <h2 id="partners-title">Our Trusted Manufacturing Partners</h2>
+        <h2 id="partners-title">{t.partnersTitle}</h2>
         <div className="partner-grid">
           {partners.map((partner) => (
             <div className="partner-wordmark" key={partner.name}>
@@ -357,19 +301,19 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        <p>More partners and solutions coming soon.</p>
+        <p>{t.partnersMore}</p>
       </section>
 
       <section className="support-section" id="support">
         <div className="support-copy">
           <Headphones aria-hidden="true" />
           <div>
-            <h2>Need help finding the right solution?</h2>
-            <p>Our team is ready to support you.</p>
+            <h2>{t.supportTitle}</h2>
+            <p>{t.supportCopy}</p>
           </div>
         </div>
         <Link className="support-button" href="/contact" id="contact">
-          Contact us today
+          {t.supportButton}
         </Link>
       </section>
     </main>

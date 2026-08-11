@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, Menu } from "lucide-react";
 import { productCategories } from "../data/catalogue";
+import { getLocaleMessages } from "../locales/server";
 import LanguageSelector from "./LanguageSelector";
 
 type ActivePage = "home" | "products" | "about" | "partners";
@@ -10,17 +11,18 @@ type SiteHeaderProps = {
   activePage?: ActivePage;
 };
 
-const navigation: Array<{ label: string; href: string; key: ActivePage }> = [
-  { label: "Home", href: "/", key: "home" },
-  { label: "About Us", href: "/about", key: "about" },
-  { label: "Partners", href: "/partners", key: "partners" },
-];
+export default async function SiteHeader({ activePage }: SiteHeaderProps) {
+  const { locale, messages } = await getLocaleMessages();
+  const navigation: Array<{ label: string; href: string; key: ActivePage }> = [
+    { label: messages.header.home, href: "/", key: "home" },
+    { label: messages.header.about, href: "/about", key: "about" },
+    { label: messages.header.partners, href: "/partners", key: "partners" },
+  ];
 
-export default function SiteHeader({ activePage }: SiteHeaderProps) {
   return (
     <header className="site-header">
       <div className="nav-shell">
-        <Link className="brand" href="/" aria-label="Woittola Healthcare home">
+        <Link className="brand" href="/" aria-label={messages.header.homeAria}>
           <Image
             src="/images/logo.png"
             alt="Woittola Healthcare"
@@ -31,9 +33,9 @@ export default function SiteHeader({ activePage }: SiteHeaderProps) {
           />
         </Link>
 
-        <nav className="desktop-nav" aria-label="Main navigation">
+        <nav className="desktop-nav" aria-label={messages.header.mainNavigation}>
           <Link className={`nav-link${activePage === "home" ? " active" : ""}`} href="/">
-            Home
+            {messages.header.home}
           </Link>
 
           <div className="products-nav-item">
@@ -41,14 +43,14 @@ export default function SiteHeader({ activePage }: SiteHeaderProps) {
               className={`nav-link products-nav-link${activePage === "products" ? " active" : ""}`}
               href="/catalogue"
             >
-              Products <ChevronDown aria-hidden="true" />
+              {messages.header.products} <ChevronDown aria-hidden="true" />
             </Link>
-            <div className="products-dropdown" aria-label="Product categories">
-              <p>Product categories</p>
+            <div className="products-dropdown" aria-label={messages.header.productCategories}>
+              <p>{messages.header.productCategories}</p>
               <div>
                 {productCategories.map((category) => (
-                  <Link href="/catalogue/treatment-chairs" key={category.slug}>
-                    {category.name}
+                  <Link href={`/catalogue/${category.slug}`} key={category.slug}>
+                    {messages.categoryNames[category.slug]}
                   </Link>
                 ))}
               </div>
@@ -66,26 +68,26 @@ export default function SiteHeader({ activePage }: SiteHeaderProps) {
           ))}
         </nav>
 
-        <LanguageSelector />
+        <LanguageSelector locale={locale} labels={messages.languageSelector} />
 
         <Link className="header-quote" href="/contact#contact-form">
-          Contact &amp; Support
+          {messages.header.contact}
         </Link>
 
         <details className="mobile-menu">
-          <summary aria-label="Open navigation menu">
+          <summary aria-label={messages.header.openNavigation}>
             <Menu aria-hidden="true" />
           </summary>
-          <nav aria-label="Mobile navigation">
-            <Link href="/">Home</Link>
+          <nav aria-label={messages.header.mainNavigation}>
+            <Link href="/">{messages.header.home}</Link>
             <details className="mobile-products-menu">
               <summary>
-                Products <ChevronDown aria-hidden="true" />
+                {messages.header.products} <ChevronDown aria-hidden="true" />
               </summary>
               <div className="mobile-products-dropdown">
                 {productCategories.map((category) => (
-                  <Link href="/catalogue/treatment-chairs" key={category.slug}>
-                    {category.name}
+                  <Link href={`/catalogue/${category.slug}`} key={category.slug}>
+                    {messages.categoryNames[category.slug]}
                   </Link>
                 ))}
               </div>
@@ -96,19 +98,9 @@ export default function SiteHeader({ activePage }: SiteHeaderProps) {
               </Link>
             ))}
             <Link className="mobile-quote-link" href="/contact#contact-form">
-              Contact &amp; Support
+              {messages.header.contact}
             </Link>
-            <div className="mobile-language-selector" aria-label="Languages">
-              <span>Language</span>
-              <div>
-                <button className="active" type="button" aria-pressed="true">
-                  EN
-                </button>
-                <button type="button" aria-pressed="false">
-                  FI
-                </button>
-              </div>
-            </div>
+            <LanguageSelector locale={locale} labels={messages.languageSelector} variant="mobile" />
           </nav>
         </details>
       </div>

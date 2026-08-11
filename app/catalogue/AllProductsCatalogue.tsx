@@ -4,14 +4,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { productCategories } from "../data/catalogue";
+import type { PublicCategory } from "@/lib/catalogue/types";
+import type { DeepTranslated, Messages } from "../locales";
 
-export default function AllProductsCatalogue() {
+type AllProductsCatalogueProps = {
+  categories: PublicCategory[];
+  ui: DeepTranslated<Messages>["catalogue"];
+};
+
+export default function AllProductsCatalogue({ categories, ui }: AllProductsCatalogueProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const visibleCategories = selectedCategories.length
-    ? productCategories.filter((category) => selectedCategories.includes(category.slug))
-    : productCategories;
+    ? categories.filter((category) => selectedCategories.includes(category.slug))
+    : categories;
 
   const toggleCategory = (slug: string) => {
     setSelectedCategories((selected) =>
@@ -22,18 +28,18 @@ export default function AllProductsCatalogue() {
   };
 
   return (
-    <section className="catalogue-products-section all-products-section" aria-label="All product categories">
+    <section className="catalogue-products-section all-products-section" aria-label={ui.allCategoriesAria}>
       <div className="catalogue-layout all-products-layout">
-        <aside className="catalogue-filter-card all-products-filter" aria-label="Filter products by category">
+        <aside className="catalogue-filter-card all-products-filter" aria-label={ui.filterAria}>
           <div className="catalogue-filter-heading">
-            <h2>Filter products</h2>
+            <h2>{ui.filterProducts}</h2>
             <button type="button" onClick={() => setSelectedCategories([])}>
-              Clear all
+              {ui.clearAll}
             </button>
           </div>
 
           <fieldset className="catalogue-filter-group">
-            <legend>Category</legend>
+            <legend>{ui.category}</legend>
             <label className="catalogue-checkbox-row">
               <input
                 type="checkbox"
@@ -41,9 +47,9 @@ export default function AllProductsCatalogue() {
                 onChange={() => setSelectedCategories([])}
               />
               <span className="catalogue-checkmark" aria-hidden="true" />
-              <span>All Categories</span>
+              <span>{ui.allCategories}</span>
             </label>
-            {productCategories.map((category) => (
+            {categories.map((category) => (
               <label className="catalogue-checkbox-row" key={category.slug}>
                 <input
                   type="checkbox"
@@ -52,7 +58,7 @@ export default function AllProductsCatalogue() {
                 />
                 <span className="catalogue-checkmark" aria-hidden="true" />
                 <span>
-                  {category.name} ({category.productCount})
+                  {category.translation.name} ({category.products.length})
                 </span>
               </label>
             ))}
@@ -63,7 +69,7 @@ export default function AllProductsCatalogue() {
             type="button"
             onClick={() => setSelectedCategories([])}
           >
-            Reset filter
+            {ui.resetFilter}
           </button>
         </aside>
 
@@ -72,47 +78,46 @@ export default function AllProductsCatalogue() {
             <section className="product-category-group" key={category.slug} aria-labelledby={`${category.slug}-title`}>
               <div className="product-category-heading">
                 <div>
-                  <h2 id={`${category.slug}-title`}>{category.name}</h2>
-                  <p>{category.description}</p>
+                  <h2 id={`${category.slug}-title`}>{category.translation.name}</h2>
+                  <p>{category.translation.heroDescription}</p>
                 </div>
-                <Link href="/catalogue/treatment-chairs">
+                <Link href={`/catalogue/${category.slug}`}>
                   <span>
-                    See all products <span className="category-button-label">from this category</span>
+                    {ui.seeAll} <span className="category-button-label">{ui.fromCategory}</span>
                   </span>
                   <ArrowRight aria-hidden="true" />
                 </Link>
               </div>
 
-              <div className="catalogue-product-grid">
-                {category.products.slice(0, 3).map((product, index) => (
+              {category.products.length ? (
+                <div className="catalogue-product-grid">
+                {category.products.slice(0, 3).map((product) => (
                   <article className="catalogue-product-card" key={product.slug}>
                     <div className={`catalogue-product-media overview-product-media overview-product-media-${category.slug}`}>
-                      {category.slug === "treatment-chairs" && index === 0 ? (
-                        <span className="catalogue-bestseller">Bestseller</span>
-                      ) : null}
-                      <Image
-                        src={product.image}
-                        alt={`${product.name} ${product.type}`}
-                        fill
-                        sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 90vw"
-                        unoptimized
-                      />
+                      {product.featured ? <span className="catalogue-bestseller">{ui.featured}</span> : null}
+                      {product.primaryImageUrl ? <Image src={product.primaryImageUrl} alt={`${product.translation.name} ${product.translation.productTypeLabel || product.productType}`} fill sizes="(min-width: 1100px) 300px, (min-width: 700px) 45vw, 90vw" unoptimized /> : <span className="catalogue-overview-image-empty">{ui.imageSoon}</span>}
                     </div>
                     <div className="catalogue-product-content overview-product-content">
-                      <h3>{product.name}</h3>
-                      <p>{product.type}</p>
-                      <div className="overview-product-tags" aria-label="Applications">
-                        {product.applications.map((application) => (
-                          <span key={application}>{application}</span>
+                      <h3>{product.translation.name}</h3>
+                      {product.translation.productTypeLabel || product.productType ? <p>{product.translation.productTypeLabel || product.productType}</p> : null}
+                      {product.applications.length ? <div className="overview-product-tags" aria-label={ui.applications}>
+                        {product.applications.map((application, index) => (
+                          <span key={application}>{product.translation.applicationLabels[index] || application}</span>
                         ))}
-                      </div>
+                      </div> : null}
                       <Link href={`/products/${product.slug}`}>
-                        View product <ArrowRight aria-hidden="true" />
+                        {ui.viewProduct} <ArrowRight aria-hidden="true" />
                       </Link>
                     </div>
                   </article>
                 ))}
-              </div>
+                </div>
+              ) : (
+                <div className="product-category-empty">
+                  <p>{ui.noCategoryProducts}</p>
+                  <Link href={`/catalogue/${category.slug}`}>{ui.viewCategory} <ArrowRight aria-hidden="true" /></Link>
+                </div>
+              )}
             </section>
           ))}
         </div>
