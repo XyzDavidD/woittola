@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import "@fontsource/lato/400.css";
 import "@fontsource/lato/700.css";
-import "./globals.css";
+// Keep the site stylesheet as a distinct build input so Vercel emits a fresh,
+// content-hashed CSS asset instead of reusing an older deployment artifact.
+import "./woittola.css";
 import { getLocaleMessages } from "./locales/server";
 
 const deployedUrl =
