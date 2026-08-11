@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, ClipboardCheck, Download, Stethoscope } from "lucide-react";
 import SiteHeader from "../../components/SiteHeader";
+import SiteFooter from "../../components/SiteFooter";
 import QuoteRequestModal from "../../components/QuoteRequestModal";
 import ProductGallery from "./ProductGallery";
 import ProductInformation from "./ProductInformation";
@@ -79,6 +80,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
         <ProductInformation productName={product.translation.name} content={product.translation} brochureUrl={product.brochureUrl} technicalSheetUrl={product.technicalSheetUrl} ui={messages.product} />
       </div>
+      <SiteFooter />
     </main>
   );
 }

@@ -5,7 +5,7 @@ import { productCategories } from "../data/catalogue";
 import { getLocaleMessages } from "../locales/server";
 import LanguageSelector from "./LanguageSelector";
 
-type ActivePage = "home" | "products" | "about" | "partners";
+type ActivePage = "home" | "products" | "references" | "about" | "partners";
 
 type SiteHeaderProps = {
   activePage?: ActivePage;
@@ -15,6 +15,7 @@ export default async function SiteHeader({ activePage }: SiteHeaderProps) {
   const { locale, messages } = await getLocaleMessages();
   const navigation: Array<{ label: string; href: string; key: ActivePage }> = [
     { label: messages.header.home, href: "/", key: "home" },
+    { label: messages.header.references, href: "/references", key: "references" },
     { label: messages.header.about, href: "/about", key: "about" },
     { label: messages.header.partners, href: "/partners", key: "partners" },
   ];

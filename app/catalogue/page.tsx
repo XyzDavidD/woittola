@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ChevronRight } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
+import SiteFooter from "../components/SiteFooter";
 import AllProductsCatalogue from "./AllProductsCatalogue";
 import { getPublicCategories } from "@/lib/catalogue/queries";
 import { getLocaleMessages } from "../locales/server";
@@ -36,6 +37,7 @@ export default async function CataloguePage() {
       </section>
 
       <AllProductsCatalogue categories={categories} ui={t} />
+      <SiteFooter />
     </main>
   );
 }

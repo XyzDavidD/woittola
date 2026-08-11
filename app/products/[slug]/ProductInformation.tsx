@@ -16,6 +16,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { ProductTranslation } from "@/lib/catalogue/types";
+import { CONTACT_EMAIL_HREF } from "@/lib/site";
 import type { DeepTranslated, Messages } from "../../locales";
 import { interpolate } from "../../locales";
 
@@ -107,7 +108,7 @@ export default function ProductInformation({ productName, content, brochureUrl, 
       </div>
 
       <div className="product-help-banner">
-        <div className="product-help-intro"><h2>{ui.helpTitle}</h2><p>{ui.helpCopy}</p><Link href="mailto:info@woittola.fi">{ui.contactUs}</Link></div>
+        <div className="product-help-intro"><h2>{ui.helpTitle}</h2><p>{ui.helpCopy}</p><Link href={CONTACT_EMAIL_HREF}>{ui.contactUs}</Link></div>
         <div className="product-help-items">{ui.supportItems.map(({ title, copy }, index) => {
           const Icon = [Headphones, HandHeart, ClipboardCheck][index];
           return <div className="product-help-item" key={title}><Icon aria-hidden="true" /><div><h3>{title}</h3><p>{copy}</p></div></div>;

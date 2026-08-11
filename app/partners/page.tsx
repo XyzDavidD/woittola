@@ -1,9 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Factory, Globe2 } from "lucide-react";
+import { ArrowRight, BadgeCheck, Factory, Globe2 } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
-import { partners } from "../data/partners";
+import SiteFooter from "../components/SiteFooter";
 import { getLocaleMessages } from "../locales/server";
+import { getPublicPartners } from "@/lib/partners/queries";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { messages } = await getLocaleMessages();
@@ -11,8 +13,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PartnersPage() {
-  const { messages } = await getLocaleMessages();
+  const { locale, messages } = await getLocaleMessages();
   const t = messages.partnersPage;
+  const partners = await getPublicPartners(locale);
 
   return (
     <main className="home-page info-page">
@@ -41,9 +44,18 @@ export default async function PartnersPage() {
         </div>
         <div className="partners-page-grid">
           {partners.map((partner) => (
-            <article className="partners-page-card" key={partner.name}>
-              <strong>{partner.name}</strong>
-              <span>{partner.tagline}</span>
+            <article className={`partners-page-card ${partner.imageUrl ? "has-image" : ""}`} key={partner.id}>
+              {partner.imageUrl ? <div className="partners-page-card-image"><Image src={partner.imageUrl} alt={partner.translation.title} fill sizes="(min-width: 900px) 560px, 100vw" unoptimized /></div> : null}
+              <div className="partners-page-card-heading">
+                <div>
+                  <strong>{partner.translation.title}</strong>
+                </div>
+                <BadgeCheck aria-hidden="true" />
+              </div>
+              <p>{partner.translation.description}</p>
+              <div className="partners-page-card-footer">
+                <span /> {t.specialistPartner}
+              </div>
             </article>
           ))}
         </div>
@@ -57,6 +69,7 @@ export default async function PartnersPage() {
           </Link>
         </div>
       </section>
+      <SiteFooter />
     </main>
   );
 }

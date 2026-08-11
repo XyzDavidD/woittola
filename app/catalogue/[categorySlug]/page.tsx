@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { BadgeCheck, ChevronRight, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import SiteHeader from "../../components/SiteHeader";
+import SiteFooter from "../../components/SiteFooter";
 import ProductCatalogue from "../ProductCatalogue";
 import { getPublicCategory } from "@/lib/catalogue/queries";
 import { getLocaleMessages } from "../../locales/server";
@@ -75,6 +76,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       </section>
 
       <ProductCatalogue categoryName={category.translation.name} products={category.products} locale={locale} ui={messages.catalogue} />
+      <SiteFooter />
     </main>
   );
 }

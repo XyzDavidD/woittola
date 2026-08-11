@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
   }
 
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL || "info@woittola.fi";
+  const to = process.env.CONTACT_EMAIL || CONTACT_EMAIL;
   const from = process.env.EMAIL_FROM || "Woittola Website <website@woittola.fi>";
 
   if (!apiKey) {

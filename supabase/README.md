@@ -26,6 +26,33 @@ uses Gemini to create validated Finnish JSON, and records its status. A failed
 translation preserves English and causes the Finnish public page to fall back
 to English until an administrator retries it.
 
+## Adding reference projects
+
+Open `/dashboard`, choose **References → Add new project**, and enter the
+English project information. The title, summary, and cover image are required;
+project type, year, location, unit, and flexible page blocks are optional.
+Project type is a free-text English field. Blocks can be reordered and composed
+only as text or a single image with text, giving each project an editorial
+layout without requiring a new page template.
+
+Saving calls the same authenticated translation function as the catalogue. It
+stores English first, translates the project metadata and block copy to Finnish,
+and preserves dates, block types, and media URLs. A unique URL is generated
+automatically from the English title when the project is first saved and stays
+stable on later edits. The dashboard shows the translation status and offers a
+retry action after a failure. Public Finnish pages fall back to English while a
+translation is processing or failed.
+
+## Adding partners
+
+Open `/dashboard`, choose **Partners → Add new partner**, and enter the English
+company title and introduction. A logo or representative image is optional and
+can be added, replaced, or removed later. Saving writes English first and uses
+the authenticated Edge Function to generate the Finnish title and description.
+Partners can be edited or permanently deleted from the same dashboard section.
+If Finnish translation fails, the public partners page displays the English
+content until an administrator retries it.
+
 ## Deploy automatic translation
 
 `GEMINI_API_KEY` must be an Edge Function secret, never a browser environment
@@ -38,11 +65,11 @@ npx supabase link --project-ref mbzhczgqxtixiymxfwjp
 npx supabase migration repair 202608110001 --status applied --linked
 npx supabase db push --dry-run
 npx supabase db push
-npx supabase functions deploy catalogue-translate --project-ref mbzhczgqxtixiymxfwjp --no-verify-jwt
+npx supabase functions deploy catalogue-translate --project-ref mbzhczgqxtixiymxfwjp --no-verify-jwt --use-api
 ```
 
-The dry run should show only
-`202608120001_automatic_finnish_translations.sql`. Despite the deployment flag,
+The dry run shows migrations that have not yet been applied, including
+`202608130001_reference_projects.sql` on a catalogue-only database. Despite the deployment flag,
 the function is not publicly usable: it validates the bearer token with
 Supabase Auth, checks `catalogue_admins`, and performs database operations
 through the verified user's RLS-protected session.

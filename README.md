@@ -7,6 +7,9 @@ The project is ready for the visual build with Next.js, React, TypeScript, and T
 - `/` — landing page
 - `/catalogue` — product catalogue
 - `/products/[slug]` — reusable dynamic product page
+- `/references` — project and reference archive
+- `/references/[slug]` — dynamic project detail page with flexible content blocks
+- `/partners` — database-backed manufacturing partner profiles
 
 ## Start locally
 
@@ -32,9 +35,9 @@ npm run lint
 npm run build
 ```
 
-## Automatic Finnish catalogue translation
+## Automatic Finnish content translation
 
-The product and category forms accept English content only. An authenticated
+The product, category, reference project, and partner forms accept English content only. An authenticated
 Supabase Edge Function verifies the signed-in user against `catalogue_admins`,
 saves the English row through restricted RPCs, translates only natural-language
 fields with `gemini-3.5-flash-lite`, validates the structured response, and
@@ -57,13 +60,16 @@ npx supabase link --project-ref mbzhczgqxtixiymxfwjp
 npx supabase migration repair 202608110001 --status applied --linked
 npx supabase db push --dry-run
 npx supabase db push
-npx supabase functions deploy catalogue-translate --project-ref mbzhczgqxtixiymxfwjp --no-verify-jwt
+npx supabase functions deploy catalogue-translate --project-ref mbzhczgqxtixiymxfwjp --no-verify-jwt --use-api
 ```
 
 The migration repair command records the original catalogue migration as
 applied because it was previously run through the Supabase SQL Editor. The dry
-run should list only `202608120001_automatic_finnish_translations.sql` before
-you run the real push.
+run lists any migrations that have not yet been applied. Reference projects
+are introduced by `202608130001_reference_projects.sql`; the streamlined
+text/image editor and automatic project URLs are applied by
+`202608150001_reference_editor_simplification.sql`. Editable partners are
+introduced by `202608160001_partners.sql`.
 
 `verify_jwt` is disabled at the gateway because the function performs explicit
 JWT verification with `auth.getUser()` and then checks `is_catalogue_admin()`.
@@ -84,11 +90,13 @@ Then run:
 
 ```bash
 npm run test:translation-e2e
+npm run test:references-e2e
+npm run test:partners-e2e
 ```
 
-The test signs in as the catalogue admin, creates a temporary draft product,
-waits for Gemini, verifies both language rows and protected values, and deletes
-the temporary product in cleanup.
+The tests sign in as the catalogue admin, create temporary draft records, wait
+for Gemini, verify both language rows and protected values or media structure,
+and delete the temporary records in cleanup.
 
 ## Deployment
 

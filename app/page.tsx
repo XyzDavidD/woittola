@@ -19,12 +19,11 @@ import {
   Venus,
 } from "lucide-react";
 import SiteHeader from "./components/SiteHeader";
-import { partners } from "./data/partners";
+import SiteFooter from "./components/SiteFooter";
 import { getLocaleMessages } from "./locales/server";
 
 type Category = {
   slug: keyof typeof import("./locales/en").en.home.primaryCategories;
-  maker: string;
   image: string;
   imageClass: string;
   accent: string;
@@ -34,7 +33,6 @@ type Category = {
 const categories: Category[] = [
   {
     slug: "patient-chairs",
-    maker: "Haelvoet",
     image: "/images/chair1.png",
     imageClass: "chair-one",
     accent: "#087d68",
@@ -42,7 +40,6 @@ const categories: Category[] = [
   },
   {
     slug: "treatment-chairs",
-    maker: "Greiner",
     image: "/images/chair2.png",
     imageClass: "chair-two",
     accent: "#063b91",
@@ -50,7 +47,6 @@ const categories: Category[] = [
   },
   {
     slug: "gynecology",
-    maker: "Promotal",
     image: "/images/chair3.png",
     imageClass: "chair-three",
     accent: "#7a2396",
@@ -58,7 +54,6 @@ const categories: Category[] = [
   },
   {
     slug: "patient-stretchers",
-    maker: "Novak-M",
     image: "/images/chair3.png",
     imageClass: "chair-three",
     accent: "#008b99",
@@ -66,7 +61,6 @@ const categories: Category[] = [
   },
   {
     slug: "medical-carts",
-    maker: "La Pastilla",
     image: "/images/chair3.png",
     imageClass: "chair-three",
     accent: "#c81d2b",
@@ -135,7 +129,7 @@ export default async function HomePage() {
                 <div className={`category-image ${category.imageClass}`}>
                   <Image
                     src={category.image}
-                    alt={`${title} ${t.by} ${category.maker}`}
+                    alt={title}
                     fill
                     sizes="(min-width: 1100px) 220px, (min-width: 640px) 45vw, 90vw"
                     loading="eager"
@@ -149,7 +143,6 @@ export default async function HomePage() {
                 <div className="category-content">
                   <div>
                     <h2>{title}</h2>
-                    <p className="maker">{t.by} {category.maker}</p>
                     <ul>
                       {products.map((product) => (
                         <li key={product}>{product}</li>
@@ -291,19 +284,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="partners-section" id="partners" aria-labelledby="partners-title">
-        <h2 id="partners-title">{t.partnersTitle}</h2>
-        <div className="partner-grid">
-          {partners.map((partner) => (
-            <div className="partner-wordmark" key={partner.name}>
-              <strong>{partner.name}</strong>
-              <span>{partner.tagline}</span>
-            </div>
-          ))}
-        </div>
-        <p>{t.partnersMore}</p>
-      </section>
-
       <section className="support-section" id="support">
         <div className="support-copy">
           <Headphones aria-hidden="true" />
@@ -316,6 +296,7 @@ export default async function HomePage() {
           {t.supportButton}
         </Link>
       </section>
+      <SiteFooter />
     </main>
   );
 }

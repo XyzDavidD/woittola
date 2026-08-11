@@ -9,7 +9,7 @@ const corsHeaders = {
 const model = "gemini-3.5-flash-lite";
 const maximumPayloadLength = 100_000;
 
-type EntityType = "category" | "product";
+type EntityType = "category" | "product" | "referenceProject" | "partner";
 type TranslationStatus = "processing" | "ready" | "failed";
 
 type CategorySource = {
@@ -36,6 +36,41 @@ type ProductSource = {
 type ProductTranslationContext = {
   source: ProductSource;
   brand: string;
+};
+
+type PartnerSource = {
+  title: string;
+  description: string;
+};
+
+type ProjectSourceBlock = {
+  heading: string;
+  body: string;
+  imageAlt: string;
+  caption: string;
+};
+
+type ProjectSource = {
+  title: string;
+  summary: string;
+  projectTypeLabel: string;
+  location: string;
+  unit: string;
+  metaTitle: string;
+  metaDescription: string;
+  contentBlocks: ProjectSourceBlock[];
+};
+
+type StoredProjectBlock = ProjectSourceBlock & {
+  id: string;
+  type: "text" | "image-text";
+  imageUrls: string[];
+  imagePosition: "left" | "right";
+};
+
+type ProjectTranslationContext = {
+  source: ProjectSource;
+  blocks: StoredProjectBlock[];
 };
 
 const categorySchema = {
@@ -97,6 +132,45 @@ const productSchema = {
     "specifications",
     "accessories",
   ],
+};
+
+const projectSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    title: { type: "string" },
+    summary: { type: "string" },
+    projectTypeLabel: { type: "string" },
+    location: { type: "string" },
+    unit: { type: "string" },
+    metaTitle: { type: "string" },
+    metaDescription: { type: "string" },
+    contentBlocks: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          heading: { type: "string" },
+          body: { type: "string" },
+          imageAlt: { type: "string" },
+          caption: { type: "string" },
+        },
+        required: ["heading", "body", "imageAlt", "caption"],
+      },
+    },
+  },
+  required: ["title", "summary", "projectTypeLabel", "location", "unit", "metaTitle", "metaDescription", "contentBlocks"],
+};
+
+const partnerSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    title: { type: "string", description: "Partner company title; preserve company and brand names." },
+    description: { type: "string", description: "Natural Finnish company introduction." },
+  },
+  required: ["title", "description"],
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -230,6 +304,20 @@ function validateCategoryTranslation(value: unknown, source: CategorySource): Ca
   return translated;
 }
 
+function validatePartnerTranslation(value: unknown, source: PartnerSource): PartnerSource {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Gemini returned an invalid partner translation.");
+  }
+  const item = value as Record<string, unknown>;
+  const translated = {
+    title: requireString(item.title, "title"),
+    description: requireString(item.description, "description"),
+  };
+  assertProtectedTextPreserved(source.title, translated.title, "title", [source.title]);
+  assertProtectedTextPreserved(source.description, translated.description, "description", [source.title]);
+  return translated;
+}
+
 function validateProductTranslation(value: unknown, source: ProductSource, brand: string): ProductSource {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Gemini returned an invalid product translation.");
@@ -300,6 +388,46 @@ function validateProductTranslation(value: unknown, source: ProductSource, brand
   return translated;
 }
 
+function validateProjectTranslation(value: unknown, source: ProjectSource): ProjectSource {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Gemini returned an invalid reference-project translation.");
+  }
+  const item = value as Record<string, unknown>;
+  if (!Array.isArray(item.contentBlocks) || item.contentBlocks.length !== source.contentBlocks.length) {
+    throw new Error("Gemini returned an invalid project content-block list.");
+  }
+  const translated: ProjectSource = {
+    title: requireString(item.title, "title"),
+    summary: requireString(item.summary, "summary"),
+    projectTypeLabel: requireString(item.projectTypeLabel, "projectTypeLabel"),
+    location: requireString(item.location, "location"),
+    unit: requireString(item.unit, "unit"),
+    metaTitle: requireString(item.metaTitle, "metaTitle"),
+    metaDescription: requireString(item.metaDescription, "metaDescription"),
+    contentBlocks: item.contentBlocks.map((block, index) => {
+      if (!block || typeof block !== "object" || Array.isArray(block)) {
+        throw new Error(`Gemini returned an invalid content block at position ${index + 1}.`);
+      }
+      const row = block as Record<string, unknown>;
+      return {
+        heading: requireString(row.heading, `contentBlocks[${index}].heading`),
+        body: requireString(row.body, `contentBlocks[${index}].body`),
+        imageAlt: requireString(row.imageAlt, `contentBlocks[${index}].imageAlt`),
+        caption: requireString(row.caption, `contentBlocks[${index}].caption`),
+      };
+    }),
+  };
+  (["title", "summary", "projectTypeLabel", "location", "unit", "metaTitle", "metaDescription"] as const).forEach((field) => {
+    assertProtectedTextPreserved(source[field], translated[field], field);
+  });
+  source.contentBlocks.forEach((block, index) => {
+    (["heading", "body", "imageAlt", "caption"] as const).forEach((field) => {
+      assertProtectedTextPreserved(block[field], translated.contentBlocks[index][field], `contentBlocks[${index}].${field}`);
+    });
+  });
+  return translated;
+}
+
 async function readCategorySource(admin: ReturnType<typeof createClient>, entityId: string): Promise<CategorySource> {
   const { data, error } = await admin
     .from("category_translations")
@@ -315,6 +443,17 @@ async function readCategorySource(admin: ReturnType<typeof createClient>, entity
     metaTitle: data.meta_title,
     metaDescription: data.meta_description,
   };
+}
+
+async function readPartnerSource(admin: ReturnType<typeof createClient>, entityId: string): Promise<PartnerSource> {
+  const { data, error } = await admin
+    .from("partner_translations")
+    .select("title, description")
+    .eq("partner_id", entityId)
+    .eq("locale", "en")
+    .single();
+  if (error || !data) throw new Error("The English partner content could not be found.");
+  return { title: data.title, description: data.description };
 }
 
 async function readProductSource(admin: ReturnType<typeof createClient>, entityId: string): Promise<ProductTranslationContext> {
@@ -345,6 +484,30 @@ async function readProductSource(admin: ReturnType<typeof createClient>, entityI
   };
 }
 
+async function readProjectSource(admin: ReturnType<typeof createClient>, entityId: string): Promise<ProjectTranslationContext> {
+  const { data, error } = await admin
+    .from("reference_project_translations")
+    .select("title, summary, project_type_label, location, unit, meta_title, meta_description, content_blocks")
+    .eq("project_id", entityId)
+    .eq("locale", "en")
+    .single();
+  if (error || !data) throw new Error("The English reference-project content could not be found.");
+  const blocks = Array.isArray(data.content_blocks) ? data.content_blocks as StoredProjectBlock[] : [];
+  return {
+    blocks,
+    source: {
+      title: data.title,
+      summary: data.summary,
+      projectTypeLabel: data.project_type_label,
+      location: data.location,
+      unit: data.unit,
+      metaTitle: data.meta_title,
+      metaDescription: data.meta_description,
+      contentBlocks: blocks.map(({ heading, body, imageAlt, caption }) => ({ heading, body, imageAlt, caption })),
+    },
+  };
+}
+
 async function markStatus(
   admin: ReturnType<typeof createClient>,
   entityType: EntityType,
@@ -352,7 +515,13 @@ async function markStatus(
   status: TranslationStatus,
   error: string | null,
 ) {
-  const table = entityType === "category" ? "categories" : "products";
+  const table = entityType === "category"
+    ? "categories"
+    : entityType === "product"
+      ? "products"
+      : entityType === "referenceProject"
+        ? "reference_projects"
+        : "partners";
   const payload: Record<string, unknown> = {
     translation_status: status,
     translation_error: error,
@@ -396,7 +565,10 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Invalid JSON request." }, 400);
   }
 
-  if ((body.action !== "save" && body.action !== "retry") || (body.entityType !== "category" && body.entityType !== "product")) {
+  if (
+    (body.action !== "save" && body.action !== "retry") ||
+    (body.entityType !== "category" && body.entityType !== "product" && body.entityType !== "referenceProject" && body.entityType !== "partner")
+  ) {
     return jsonResponse({ error: "Invalid translation action." }, 400);
   }
 
@@ -404,16 +576,32 @@ Deno.serve(async (request) => {
   // subject to the catalogue administrator RLS policies.
   const admin = userClient;
   let entityId = body.entityId ?? "";
+  let savedSlug = "";
 
   try {
     if (body.action === "save") {
       if (!body.data || typeof body.data !== "object" || Array.isArray(body.data)) {
         return jsonResponse({ error: "Catalogue content is required." }, 400);
       }
-      const rpcName = body.entityType === "category" ? "save_category_english" : "save_product_english";
+      const rpcName = body.entityType === "category"
+        ? "save_category_english"
+        : body.entityType === "product"
+          ? "save_product_english"
+          : body.entityType === "referenceProject"
+            ? "save_reference_project_english"
+            : "save_partner_english";
       const { data: savedId, error: saveError } = await userClient.rpc(rpcName, { p_payload: body.data });
       if (saveError || !savedId) throw new Error(saveError?.message || "English content could not be saved.");
       entityId = savedId;
+      if (body.entityType === "referenceProject") {
+        const { data: savedProject, error: slugError } = await userClient
+          .from("reference_projects")
+          .select("slug")
+          .eq("id", entityId)
+          .single();
+        if (slugError || !savedProject?.slug) throw new Error(slugError?.message || "The project URL could not be created.");
+        savedSlug = savedProject.slug;
+      }
     } else {
       if (!entityId) return jsonResponse({ error: "Entity id is required." }, 400);
       await markStatus(admin, body.entityType, entityId, "processing", null);
@@ -436,7 +624,20 @@ Deno.serve(async (request) => {
           meta_description: translated.metaDescription,
         }, { onConflict: "category_id,locale" });
         if (error) throw error;
-      } else {
+      } else if (body.entityType === "partner") {
+        const source = await readPartnerSource(admin, entityId);
+        const translation = validatePartnerTranslation(
+          await callGemini(geminiApiKey, source, partnerSchema, "partner"),
+          source,
+        );
+        const { error } = await admin.from("partner_translations").upsert({
+          partner_id: entityId,
+          locale: "fi",
+          title: translation.title,
+          description: translation.description,
+        }, { onConflict: "partner_id,locale" });
+        if (error) throw error;
+      } else if (body.entityType === "product") {
         const { source, brand } = await readProductSource(admin, entityId);
         const translatableSource = {
           ...source,
@@ -462,6 +663,27 @@ Deno.serve(async (request) => {
           accessories: translated.accessories,
         }, { onConflict: "product_id,locale" });
         if (error) throw error;
+      } else {
+        const { source, blocks } = await readProjectSource(admin, entityId);
+        const rawTranslation = await callGemini(geminiApiKey, source, projectSchema, body.entityType);
+        const translation = validateProjectTranslation(rawTranslation, source);
+        const translatedBlocks = blocks.map((block, index) => ({
+          ...block,
+          ...translation.contentBlocks[index],
+        }));
+        const { error } = await admin.from("reference_project_translations").upsert({
+          project_id: entityId,
+          locale: "fi",
+          title: translation.title,
+          summary: translation.summary,
+          project_type_label: translation.projectTypeLabel,
+          location: translation.location,
+          unit: translation.unit,
+          meta_title: translation.metaTitle,
+          meta_description: translation.metaDescription,
+          content_blocks: translatedBlocks,
+        }, { onConflict: "project_id,locale" });
+        if (error) throw error;
       }
 
       await markStatus(admin, body.entityType, entityId, "ready", null);
@@ -471,6 +693,7 @@ Deno.serve(async (request) => {
         success: true,
         translationStatus: "ready",
         translationError: null,
+        ...(savedSlug ? { slug: savedSlug } : {}),
       });
     } catch (translationError) {
       const message = safeError(translationError);
@@ -488,6 +711,7 @@ Deno.serve(async (request) => {
         success: true,
         translationStatus: "failed",
         translationError: message,
+        ...(savedSlug ? { slug: savedSlug } : {}),
       });
     }
   } catch (error) {

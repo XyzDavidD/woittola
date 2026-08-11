@@ -42,3 +42,8 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# local framework and Supabase CLI state
+/AGENTS.md
+/CLAUDE.md
+/supabase/.temp/

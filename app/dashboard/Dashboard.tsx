@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  BookOpen,
   Check,
   ChevronRight,
   CircleCheck,
   ExternalLink,
   FileText,
   GripVertical,
+  Handshake,
   ImagePlus,
   LayoutGrid,
   Languages,
@@ -31,9 +33,13 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { CatalogueCategory, CatalogueProduct, ColorOption, Specification } from "@/lib/catalogue/types";
+import type { ReferenceProject } from "@/lib/references/types";
+import type { Partner } from "@/lib/partners/types";
 import DashboardLogoutButton from "./DashboardLogoutButton";
+import ProjectManager from "./ProjectManager";
+import PartnerManager from "./PartnerManager";
 
-type DashboardView = "products" | "categories";
+type DashboardView = "products" | "categories" | "references" | "partners";
 type ProductStatus = "Published" | "Draft";
 type EditorStep = "details" | "content" | "technical";
 
@@ -613,13 +619,18 @@ function TranslationStatusBadge({ status, error, retrying, onRetry }: Translatio
 type DashboardProps = {
   initialCategories: CatalogueCategory[];
   initialProducts: CatalogueProduct[];
+  initialProjects: ReferenceProject[];
+  initialPartners: Partner[];
   databaseError?: string;
+  referenceDatabaseError?: string;
+  partnerDatabaseError?: string;
 };
 
-export default function Dashboard({ initialCategories, initialProducts, databaseError }: DashboardProps) {
+export default function Dashboard({ initialCategories, initialProducts, initialProjects, initialPartners, databaseError, referenceDatabaseError, partnerDatabaseError }: DashboardProps) {
   const [view, setView] = useState<DashboardView>("products");
   const [categories, setCategories] = useState<DashboardCategory[]>(() => initialCategories.map(toDashboardCategory));
   const [products, setProducts] = useState<DashboardProduct[]>(() => initialProducts.map(toDashboardProduct));
+  const [partners, setPartners] = useState<Partner[]>(initialPartners);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All categories");
   const [editingProduct, setEditingProduct] = useState<DashboardProduct | null | undefined>(undefined);
@@ -908,6 +919,12 @@ export default function Dashboard({ initialCategories, initialProducts, database
           <button className={view === "categories" ? "active" : ""} type="button" onClick={() => setView("categories")}>
             <Tag aria-hidden="true" /> Categories <span>{categories.length}</span>
           </button>
+          <button className={view === "references" ? "active" : ""} type="button" onClick={() => setView("references")}>
+            <BookOpen aria-hidden="true" /> References <span>{initialProjects.length}</span>
+          </button>
+          <button className={view === "partners" ? "active" : ""} type="button" onClick={() => setView("partners")}>
+            <Handshake aria-hidden="true" /> Partners <span>{partners.length}</span>
+          </button>
         </nav>
         <div className="admin-sidebar-bottom">
           <Link href="/" target="_blank"><ExternalLink aria-hidden="true" /> View website</Link>
@@ -968,7 +985,7 @@ export default function Dashboard({ initialCategories, initialProducts, database
               )}
             </section>
           </div>
-        ) : (
+        ) : view === "categories" ? (
           <div className="admin-page-content">
             {databaseError ? <div className="admin-database-notice"><AlertTriangle aria-hidden="true" /><div><strong>Catalogue connection error</strong><p>{databaseError}</p></div></div> : null}
             <div className="admin-category-layout admin-category-layout-wide">
@@ -999,7 +1016,8 @@ export default function Dashboard({ initialCategories, initialProducts, database
               </section>
             </div>
           </div>
-        )}
+        ) : view === "references" ? <ProjectManager initialProjects={initialProjects} databaseError={referenceDatabaseError} />
+          : <PartnerManager partners={partners} onPartnersChange={setPartners} databaseError={partnerDatabaseError} />}
       </div>
 
       {deleteProduct ? (

@@ -10,8 +10,10 @@ import {
   PackageSearch,
 } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
+import SiteFooter from "../components/SiteFooter";
 import ContactForm from "../components/ContactForm";
 import { getLocaleMessages } from "../locales/server";
+import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { messages } = await getLocaleMessages();
@@ -40,11 +42,11 @@ export default async function ContactPage() {
             <p>{t.lead}</p>
           </div>
           <div className="contact-hero-meta" aria-label={t.informationAria}>
-            <a href="mailto:info@woittola.fi">
+            <a href={CONTACT_EMAIL_HREF}>
               <Mail aria-hidden="true" />
               <span>
                 {t.emailTeam}
-                <strong>info@woittola.fi</strong>
+                <strong>{CONTACT_EMAIL}</strong>
               </span>
             </a>
             <div>
@@ -94,6 +96,7 @@ export default async function ContactPage() {
           <ContactForm ui={t} />
         </div>
       </section>
+      <SiteFooter />
     </main>
   );
 }

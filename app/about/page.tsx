@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, HeartHandshake, ShieldCheck } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
+import SiteFooter from "../components/SiteFooter";
 import { getLocaleMessages } from "../locales/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -50,6 +51,7 @@ export default async function AboutPage() {
           })}
         </div>
       </section>
+      <SiteFooter />
     </main>
   );
 }
