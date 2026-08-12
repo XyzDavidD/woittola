@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, ArrowLeft, Check, CircleCheck, ExternalLink, FileImage, GripVertical, ImagePlus, Languages, LayoutTemplate, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
 import type { ProjectBlockType, ProjectContentBlock, ReferenceProject } from "@/lib/references/types";
 
 type UploadAsset = { name: string; url?: string; file?: File };
@@ -90,10 +91,7 @@ function ProjectEditor({ project, onCancel, onSaved }: { project?: ReferenceProj
         const imageUrls = await uploadAssets(block.images.slice(0, 1), `references/${uploadSlug}/blocks/${block.id}`);
         contentBlocks.push({ id: block.id, type: block.type, heading: block.heading.trim(), body: block.body.trim(), imageUrls, imageAlt: block.imageAlt.trim() || block.heading.trim() || draft.title.trim(), caption: "", imagePosition: block.imagePosition });
       }
-      const supabase = createClient();
-      const { data, error: functionError } = await supabase.functions.invoke("catalogue-translate", { body: { action: "save", entityType: "referenceProject", data: { id: draft.id ?? null, slug: draft.id ? draft.slug : "", projectType: draft.projectType.trim(), completedYear: draft.completedYear, status: draft.status, coverImageUrl: coverUrls[0], galleryUrls: [], title: draft.title.trim(), summary: draft.summary.trim(), location: draft.location.trim(), unit: draft.unit.trim(), metaTitle: `${draft.title.trim()} | Woittola References`, metaDescription: draft.summary.trim(), contentBlocks } } });
-      if (functionError) throw functionError;
-      if (data?.error) throw new Error(data.error);
+      const data = await invokeCatalogueTranslation({ action: "save", entityType: "referenceProject", data: { id: draft.id ?? null, slug: draft.id ? draft.slug : "", projectType: draft.projectType.trim(), completedYear: draft.completedYear, status: draft.status, coverImageUrl: coverUrls[0], galleryUrls: [], title: draft.title.trim(), summary: draft.summary.trim(), location: draft.location.trim(), unit: draft.unit.trim(), metaTitle: `${draft.title.trim()} | Woittola References`, metaDescription: draft.summary.trim(), contentBlocks } });
       const now = new Date().toISOString();
       const savedSlug = data.slug || draft.slug || uploadSlug;
       onSaved({ id: data.entityId, slug: savedSlug, projectType: draft.projectType.trim(), completedYear: draft.completedYear ? Number(draft.completedYear) : null, status: draft.status, sortOrder: project?.sortOrder ?? 0, coverImageUrl: coverUrls[0], galleryUrls: [], translationStatus: data.translationStatus, translationError: data.translationError ?? "", translatedAt: data.translationStatus === "ready" ? now : project?.translatedAt ?? "", translationSourceUpdatedAt: now, updatedAt: now, translations: { ...project?.translations, en: { locale: "en", title: draft.title.trim(), summary: draft.summary.trim(), projectTypeLabel: draft.projectType.trim(), location: draft.location.trim(), unit: draft.unit.trim(), metaTitle: `${draft.title.trim()} | Woittola References`, metaDescription: draft.summary.trim(), contentBlocks } } });
@@ -150,11 +148,13 @@ export default function ProjectManager({ initialProjects, databaseError }: Proje
   const retry = async (project: ReferenceProject) => {
     if (retrying.includes(project.id)) return;
     setRetrying((current) => [...current, project.id]);
-    const supabase = createClient();
-    const { data, error } = await supabase.functions.invoke("catalogue-translate", { body: { action: "retry", entityType: "referenceProject", entityId: project.id } });
-    const status = error || data?.error ? "failed" : data.translationStatus;
-    const translationError = error?.message || data?.error || data?.translationError || "";
-    setProjects((current) => current.map((item) => item.id === project.id ? { ...item, translationStatus: status, translationError } : item));
+    try {
+      const data = await invokeCatalogueTranslation({ action: "retry", entityType: "referenceProject", entityId: project.id });
+      setProjects((current) => current.map((item) => item.id === project.id ? { ...item, translationStatus: data.translationStatus, translationError: data.translationError ?? "" } : item));
+    } catch (reason) {
+      const translationError = reason instanceof Error ? reason.message : "Translation retry failed";
+      setProjects((current) => current.map((item) => item.id === project.id ? { ...item, translationStatus: "failed", translationError } : item));
+    }
     setRetrying((current) => current.filter((id) => id !== project.id));
   };
   const remove = async (project: ReferenceProject) => {

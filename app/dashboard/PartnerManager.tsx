@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, ArrowLeft, Check, CircleCheck, ExternalLink, Factory, ImagePlus, Languages, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
 import type { Partner } from "@/lib/partners/types";
 
 type UploadAsset = { name: string; url?: string; file?: File };
@@ -51,9 +52,7 @@ function PartnerEditor({ partner, onCancel, onSaved }: { partner?: Partner; onCa
     try {
       const uploadId = draft.id || crypto.randomUUID();
       const imageUrl = await uploadImage(draft.image, uploadId);
-      const supabase = createClient();
-      const { data, error: functionError } = await supabase.functions.invoke("catalogue-translate", {
-        body: {
+      const data = await invokeCatalogueTranslation({
           action: "save",
           entityType: "partner",
           data: {
@@ -62,10 +61,7 @@ function PartnerEditor({ partner, onCancel, onSaved }: { partner?: Partner; onCa
             title: draft.title.trim(),
             description: draft.description.trim(),
           },
-        },
       });
-      if (functionError) throw functionError;
-      if (data?.error) throw new Error(data.error);
       const now = new Date().toISOString();
       onSaved({
         id: data.entityId,
@@ -125,10 +121,13 @@ export default function PartnerManager({ partners, onPartnersChange, databaseErr
   const retry = async (partner: Partner) => {
     if (retrying.includes(partner.id)) return;
     setRetrying((current) => [...current, partner.id]);
-    const { data, error } = await createClient().functions.invoke("catalogue-translate", { body: { action: "retry", entityType: "partner", entityId: partner.id } });
-    const status = error || data?.error ? "failed" : data.translationStatus;
-    const translationError = error?.message || data?.error || data?.translationError || "";
-    onPartnersChange(partners.map((item) => item.id === partner.id ? { ...item, translationStatus: status, translationError } : item));
+    try {
+      const data = await invokeCatalogueTranslation({ action: "retry", entityType: "partner", entityId: partner.id });
+      onPartnersChange(partners.map((item) => item.id === partner.id ? { ...item, translationStatus: data.translationStatus, translationError: data.translationError ?? "" } : item));
+    } catch (reason) {
+      const translationError = reason instanceof Error ? reason.message : "Translation retry failed";
+      onPartnersChange(partners.map((item) => item.id === partner.id ? { ...item, translationStatus: "failed", translationError } : item));
+    }
     setRetrying((current) => current.filter((id) => id !== partner.id));
   };
 

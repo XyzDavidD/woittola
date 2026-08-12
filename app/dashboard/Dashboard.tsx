@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
 import type { CatalogueCategory, CatalogueProduct, ColorOption, Specification } from "@/lib/catalogue/types";
 import type { ReferenceProject } from "@/lib/references/types";
 import type { Partner } from "@/lib/partners/types";
@@ -659,19 +660,6 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
     window.setTimeout(() => setToast(""), 2800);
   };
 
-  const invokeTranslation = async (body: Record<string, unknown>) => {
-    const supabase = createClient();
-    const { data, error } = await supabase.functions.invoke("catalogue-translate", { body });
-    if (error) throw new Error(error.message || "The translation function could not be reached.");
-    if (!data || typeof data !== "object") throw new Error("The translation function returned an invalid response.");
-    if ("error" in data && typeof data.error === "string") throw new Error(data.error);
-    return data as {
-      entityId: string;
-      translationStatus: CatalogueProduct["translationStatus"];
-      translationError: string | null;
-    };
-  };
-
   const handleSaveProduct = async (draft: ProductDraft, status: ProductStatus) => {
     try {
       const slug = draft.slug || slugify(draft.name);
@@ -703,7 +691,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         accessories: cleanList(draft.accessories),
       };
 
-      const result = await invokeTranslation({
+      const result = await invokeCatalogueTranslation({
         action: "save",
         entityType: "product",
         data: {
@@ -790,7 +778,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         metaDescription: draft.heroDescription.trim(),
       };
 
-      const result = await invokeTranslation({
+      const result = await invokeCatalogueTranslation({
         action: "save",
         entityType: "category",
         data: {
@@ -849,7 +837,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
     }
 
     try {
-      const result = await invokeTranslation({ action: "retry", entityType, entityId });
+      const result = await invokeCatalogueTranslation({ action: "retry", entityType, entityId });
       const statusUpdate = {
         translationStatus: result.translationStatus,
         translationError: result.translationError ?? "",

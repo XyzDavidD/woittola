@@ -57,9 +57,9 @@ try {
 
   const unique = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   productSlug = `translation-test-${unique}`;
-  const englishName = `Translation workflow test ${unique}`;
+  const englishName = `Woittola Translation workflow test ${unique}`;
   const englishDescription = "A temporary clinical product used to verify automatic Finnish translation. Maximum load 120 kg.";
-  const { data: result, error: invokeError } = await supabase.functions.invoke("catalogue-translate", {
+  let { data: result, error: invokeError } = await supabase.functions.invoke("catalogue-translate", {
     body: {
       action: "save",
       entityType: "product",
@@ -89,11 +89,33 @@ try {
     },
   });
   if (invokeError) {
-    let details = "";
-    if (invokeError.context instanceof Response) {
-      details = await invokeError.context.text().catch(() => "");
+    // Gemini can outlive the HTTP client's response window. In that case the
+    // Edge Function still finishes and Supabase remains the source of truth.
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const { data: savedProduct } = await supabase
+        .from("products")
+        .select("id, translation_status, translation_error")
+        .eq("slug", productSlug)
+        .maybeSingle();
+      if (savedProduct?.translation_status === "ready" || savedProduct?.translation_status === "failed") {
+        productId = savedProduct.id;
+        result = {
+          entityId: savedProduct.id,
+          translationStatus: savedProduct.translation_status,
+          translationError: savedProduct.translation_error,
+        };
+        invokeError = null;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
-    throw new Error(details || invokeError.message);
+    if (invokeError) {
+      let details = "";
+      if (invokeError.context instanceof Response) {
+        details = await invokeError.context.text().catch(() => "");
+      }
+      throw new Error(details || invokeError.message);
+    }
   }
   if (!result?.entityId) throw new Error(result?.error || "The Edge Function did not return a product id.");
   productId = result.entityId;
@@ -116,6 +138,9 @@ try {
   }
   if (!finnish.name?.trim() || !finnish.description?.trim()) {
     throw new Error("The Finnish product content is empty.");
+  }
+  if (!finnish.name.includes("Woittola")) {
+    throw new Error("The protected brand name changed inside the translated product title.");
   }
   if (finnish.colors?.[0]?.value !== "#123456" || finnish.specifications?.[0]?.value !== "120 kg") {
     throw new Error("A protected colour value, measurement or unit changed.");
