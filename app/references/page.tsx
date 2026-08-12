@@ -4,12 +4,19 @@ import { ArrowRight } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import { getLocaleMessages } from "../locales/server";
+import { getMessages } from "../locales";
 import { getPublicReferenceProjects } from "@/lib/references/queries";
 import ReferenceGallery from "./ReferenceGallery";
+import JsonLd from "../components/JsonLd";
+import { absoluteUrl, publicPageMetadata, WEBSITE_ID } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { messages } = await getLocaleMessages();
-  return { title: messages.metadata.referencesTitle, description: messages.metadata.referencesDescription };
+  const messages = await getMessages("fi");
+  return publicPageMetadata({
+    title: messages.metadata.referencesTitle,
+    description: messages.metadata.referencesDescription,
+    pathname: "/references",
+  });
 }
 
 export const dynamic = "force-dynamic";
@@ -21,6 +28,25 @@ export default async function ReferencesPage() {
 
   return (
     <main className="home-page references-page">
+      <JsonLd data={{
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "@id": `${absoluteUrl("/references")}#webpage`,
+        url: absoluteUrl("/references"),
+        name: t.title,
+        description: t.lead,
+        inLanguage: locale === "fi" ? "fi-FI" : "en",
+        isPartOf: { "@id": WEBSITE_ID },
+        mainEntity: {
+          "@type": "ItemList",
+          itemListElement: projects.map((project, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: project.translation.title,
+            url: absoluteUrl(`/references/${project.slug}`),
+          })),
+        },
+      }} />
       <SiteHeader activePage="references" />
       <section className="references-hero">
         <div className="references-shell references-hero-layout">

@@ -4,19 +4,37 @@ import { ArrowRight, BadgeCheck, HeartHandshake, ShieldCheck } from "lucide-reac
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import { getLocaleMessages } from "../locales/server";
+import { getMessages } from "../locales";
+import JsonLd from "../components/JsonLd";
+import { absoluteUrl, ORGANIZATION_ID, publicPageMetadata, WEBSITE_ID } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { messages } = await getLocaleMessages();
-  return { title: messages.metadata.aboutTitle, description: messages.metadata.aboutDescription };
+  const messages = await getMessages("fi");
+  return publicPageMetadata({
+    title: messages.metadata.aboutTitle,
+    description: messages.metadata.aboutDescription,
+    pathname: "/about",
+  });
 }
 
 export default async function AboutPage() {
-  const { messages } = await getLocaleMessages();
+  const { locale, messages } = await getLocaleMessages();
   const t = messages.about;
   const valueIcons = [ShieldCheck, HeartHandshake, BadgeCheck];
 
   return (
     <main className="home-page info-page">
+      <JsonLd data={{
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "@id": `${absoluteUrl("/about")}#webpage`,
+        url: absoluteUrl("/about"),
+        name: t.title,
+        description: t.lead,
+        inLanguage: locale === "fi" ? "fi-FI" : "en",
+        isPartOf: { "@id": WEBSITE_ID },
+        about: { "@id": ORGANIZATION_ID },
+      }} />
       <SiteHeader activePage="about" />
 
       <section className="info-hero about-page-hero">

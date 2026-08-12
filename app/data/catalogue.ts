@@ -12,6 +12,6 @@ export const productCategories: readonly ProductCategoryNavigation[] = [
   { name: "Patient Stretchers", slug: "patient-stretchers" },
   { name: "Medical Carts", slug: "medical-carts" },
   { name: "Medical Tables", slug: "medical-tables" },
-  { name: "Work Stools", slug: "work-stools" },
+  { name: "Work Chairs", slug: "work-stools" },
   { name: "Face Protection", slug: "face-protection" },
 ] as const;

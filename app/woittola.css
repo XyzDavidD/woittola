@@ -445,6 +445,10 @@ summary {
   padding: 28px 0 26px;
 }
 
+.homepage-category-flow {
+  display: contents;
+}
+
 .category-grid {
   width: min(1200px, calc(100% - 48px));
   margin: 0 auto;
@@ -481,11 +485,15 @@ summary {
   flex: 0 0 224px;
   overflow: hidden;
   border-radius: 13px 13px 0 0;
-  background: linear-gradient(145deg, #fbfcfd, #edf1f5);
+  background: #ffffff;
 }
 
 .category-image img {
+  padding: 0;
+  box-sizing: border-box;
   object-fit: contain;
+  object-position: center;
+  transform: none;
   transition: transform 350ms ease;
 }
 
@@ -493,16 +501,9 @@ summary {
   filter: saturate(1.07) contrast(1.02);
 }
 
-.category-image.chair-one img {
-  transform: scale(1.58) translateY(1%);
-}
-
-.category-image.chair-two img {
-  transform: scale(1.62) translateY(1%);
-}
-
-.category-image.chair-three img {
-  transform: scale(1.48) translateY(1%);
+.category-image.managed-category-image img {
+  object-position: center;
+  transform: none;
 }
 
 .category-icon {
@@ -624,51 +625,54 @@ summary {
   height: 148px;
   flex: 0 0 148px;
   overflow: hidden;
-  background: linear-gradient(145deg, #f7f9fb, #e9eef3);
+  background: #ffffff;
 }
 
 .secondary-media img {
+  object-fit: contain;
+  object-position: center;
+  transform: none;
   transition:
     transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
     filter 320ms ease;
 }
 
 .secondary-product-card:hover .secondary-media img {
-  transform: scale(1.025);
+  transform: none;
   filter: saturate(1.04) contrast(1.01);
 }
 
 .medical-table-media img {
   object-fit: contain;
   object-position: center;
-  transform: scale(1.12);
+  transform: none;
 }
 
 .secondary-product-card:hover .medical-table-media img {
-  transform: scale(1.15);
+  transform: none;
 }
 
 .protection-media {
-  background: linear-gradient(145deg, #eef3f8 0%, #d8e2ec 58%, #c8d6e3 100%);
+  background: #ffffff;
 }
 
 .protection-media img {
-  object-fit: cover;
-  object-position: center 45%;
+  object-fit: contain;
+  object-position: center;
 }
 
 .work-stools-media {
-  background: linear-gradient(145deg, #f6f9fc 0%, #e4ebf2 100%);
+  background: #ffffff;
 }
 
 .work-stools-media img {
   object-fit: contain;
-  object-position: center 48%;
-  transform: scale(1.42);
+  object-position: center;
+  transform: none;
 }
 
 .secondary-product-card:hover .work-stools-media img {
-  transform: scale(1.46);
+  transform: none;
 }
 
 .secondary-badge {
@@ -1339,25 +1343,20 @@ summary {
   position: relative;
   height: 260px;
   overflow: hidden;
-  background: linear-gradient(145deg, #f3f5f6 0%, #ffffff 56%, #edf1f3 100%);
+  background: #ffffff;
 }
 
 .catalogue-product-media::after {
-  position: absolute;
-  right: 12%;
-  bottom: 18px;
-  left: 12%;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(13, 25, 36, 0.1);
-  filter: blur(10px);
-  content: "";
+  content: none;
 }
 
 .catalogue-product-media img {
   z-index: 1;
+  padding: 0;
+  box-sizing: border-box;
   object-fit: contain;
-  transform: scale(2.05) translateY(-1%);
+  object-position: center;
+  transform: none;
 }
 
 .catalogue-bestseller {
@@ -1717,26 +1716,7 @@ summary {
 
 .overview-product-media img {
   object-fit: contain;
-  transform: scale(1.3);
-}
-
-.overview-product-media-treatment-chairs img {
-  transform: scale(2.05) translateY(-1%);
-}
-
-.overview-product-media-patient-chairs img,
-.overview-product-media-gynecology img {
-  transform: scale(1.75);
-}
-
-.overview-product-media-work-stools img {
-  transform: scale(1.08);
-}
-
-.overview-product-media-face-protection img,
-.overview-product-media-medical-tables img,
-.overview-product-media-patient-stretchers img {
-  transform: scale(0.9);
+  transform: none;
 }
 
 .overview-product-content {
@@ -1842,25 +1822,20 @@ summary {
   overflow: hidden;
   border: 1px solid #e0e5ea;
   border-radius: 10px;
-  background: linear-gradient(145deg, #f0f3f5 0%, #ffffff 58%, #edf1f3 100%);
+  background: #ffffff;
 }
 
 .product-gallery-main::after {
-  position: absolute;
-  right: 18%;
-  bottom: 38px;
-  left: 18%;
-  height: 25px;
-  border-radius: 50%;
-  background: rgba(13, 25, 36, 0.12);
-  filter: blur(12px);
-  content: "";
+  content: none;
 }
 
 .product-gallery-main > img {
   z-index: 1;
+  padding: 0;
+  box-sizing: border-box;
   object-fit: contain;
-  transform: scale(2.2) translateY(-1%);
+  object-position: center;
+  transform: none;
 }
 
 .product-gallery-arrow {
@@ -1918,7 +1893,7 @@ summary {
   appearance: none;
   border: 1px solid #dfe5ea;
   border-radius: 8px;
-  background: linear-gradient(145deg, #f0f3f5, #ffffff);
+  background: #ffffff;
   cursor: pointer;
   transition:
     border-color 180ms ease,
@@ -1931,8 +1906,10 @@ summary {
 }
 
 .product-gallery-thumbnails button img {
+  padding: 0;
+  box-sizing: border-box;
   object-fit: contain;
-  transform: scale(2);
+  transform: none;
 }
 
 .product-detail-info {
@@ -5611,12 +5588,14 @@ summary {
   overflow: hidden;
   border: 1px solid #e2e7eb;
   border-radius: 7px;
-  background: linear-gradient(145deg, #f1f4f6, #ffffff);
+  background: #ffffff;
 }
 
 .admin-product-identity img {
+  padding: 0;
+  box-sizing: border-box;
   object-fit: contain;
-  transform: scale(1.25);
+  transform: none;
 }
 
 .admin-product-identity > span {
@@ -5909,18 +5888,26 @@ summary {
 }
 
 .admin-category-icon {
+  position: relative;
   width: 38px;
   height: 38px;
+  overflow: hidden;
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #edf3f8;
+  background: #ffffff;
   color: #35658f;
 }
 
 .admin-category-icon svg {
   width: 18px;
   height: 18px;
+}
+
+.admin-category-icon img {
+  padding: 0;
+  box-sizing: border-box;
+  object-fit: contain;
 }
 
 .admin-category-list article > div {
@@ -5992,6 +5979,102 @@ summary {
   color: #6b7683;
   font-size: 12px;
   line-height: 1.55;
+}
+
+.contact-company-card {
+  max-width: 510px;
+  margin-top: 34px;
+  padding: 20px;
+  border: 1px solid #d9e3ec;
+  border-radius: 10px;
+  background: #f8fbfd;
+}
+
+.contact-company-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.contact-company-heading > span {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: #e6f0f8;
+  color: #0a4d8d;
+}
+
+.contact-company-heading svg {
+  width: 22px;
+  height: 22px;
+}
+
+.contact-company-heading p,
+.contact-company-heading h3 {
+  margin: 0;
+}
+
+.contact-company-heading p {
+  color: #537086;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.contact-company-heading h3 {
+  margin-top: 3px;
+  color: #092b57;
+  font-size: 17px;
+}
+
+.contact-company-heading strong {
+  margin-top: 2px;
+  display: block;
+  color: #61717f;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.contact-company-details {
+  margin-top: 17px;
+  padding-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  border-top: 1px solid #dce5ec;
+}
+
+.contact-company-details address,
+.contact-company-details a {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #455968;
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.55;
+}
+
+.contact-company-details svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: #1760a4;
+}
+
+.contact-company-details a span {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-company-details a strong {
+  margin-top: 2px;
+  color: #0b3d72;
+  font-size: 12px;
 }
 
 .admin-delete-dialog > div {
@@ -7885,6 +7968,42 @@ summary {
   margin-top: 3px;
   color: #87919c;
   font-size: 10px;
+}
+
+.admin-finnish-override {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e5eaee;
+}
+
+.admin-category-image-preview {
+  position: relative;
+  height: 190px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border: 1px solid #dfe5eb;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.admin-category-image-preview img {
+  padding: 0;
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
+.admin-category-image-preview span {
+  position: absolute;
+  z-index: 2;
+  right: 9px;
+  bottom: 9px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: rgba(8, 42, 83, 0.88);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
 }
 
 .admin-category-publish-toggle {
@@ -10106,6 +10225,41 @@ summary {
   margin-top: 20px;
 }
 
+.admin-partner-visibility-toggle {
+  margin-top: 18px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #d8e3eb;
+  border-radius: 8px;
+  background: #f7fafc;
+  color: #28445d;
+  cursor: pointer;
+}
+
+.admin-partner-visibility-toggle input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  accent-color: #1760a4;
+}
+
+.admin-partner-visibility-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-partner-visibility-toggle strong {
+  font-size: 10px;
+}
+
+.admin-partner-visibility-toggle small {
+  color: #778693;
+  font-size: 9px;
+}
+
 .admin-partner-upload {
   margin-top: 13px;
 }
@@ -10196,6 +10350,12 @@ summary {
   box-shadow: 0 4px 14px rgba(24, 44, 64, 0.045);
 }
 
+.admin-partner-grid > article.is-hidden {
+  border-style: dashed;
+  background: #f8fafb;
+  opacity: 0.82;
+}
+
 .admin-partner-image {
   position: relative;
   min-height: 190px;
@@ -10223,6 +10383,35 @@ summary {
   padding: 20px;
   display: flex;
   flex-direction: column;
+}
+
+.admin-partner-visibility {
+  width: fit-content;
+  margin-bottom: 8px;
+  padding: 4px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.admin-partner-visibility svg {
+  width: 11px;
+  height: 11px;
+}
+
+.admin-partner-visibility.published {
+  background: #e9f7ef;
+  color: #24724a;
+}
+
+.admin-partner-visibility.hidden {
+  background: #eef1f4;
+  color: #66717b;
 }
 
 .admin-partner-copy h3,
@@ -10430,6 +10619,19 @@ summary {
 
   .category-section {
     padding: 14px 0 18px;
+  }
+
+  .homepage-category-flow {
+    width: calc(100% - 32px);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .homepage-category-flow > .category-grid,
+  .homepage-category-flow > .secondary-grid {
+    display: contents;
   }
 
   .category-grid,
@@ -11008,6 +11210,10 @@ summary {
   .contact-content {
     padding: 34px 0 42px;
     gap: 28px;
+  }
+
+  .contact-company-details {
+    grid-template-columns: 1fr;
   }
 
   .contact-form-card {

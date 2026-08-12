@@ -92,7 +92,7 @@ export const en = {
     "patient-stretchers": "Patient Stretchers",
     "medical-carts": "Medical Carts",
     "medical-tables": "Medical Tables",
-    "work-stools": "Work Stools",
+    "work-stools": "Work Chairs",
     "face-protection": "Face Protection",
   },
   home: {
@@ -119,7 +119,7 @@ export const en = {
     secondary: {
       medicalTables: { title: "Medical Tables", subtitle: "Clinical examination solutions", products: ["Examination Tables", "Ultrasound Tables", "Tilt Tables", "Radiology Tables"], imageAlt: "Medical examination table" },
       ent: { title: "ENT Solutions", subtitle: "Specialist clinical solutions", description: "Advanced ENT chairs, treatment units and equipment solutions." },
-      stools: { title: "Work Stools", subtitle: "Professional seating", products: ["Medical Stools", "Operator Stools", "Height-adjustable Seating"], imageAlt: "Chrome height-adjustable healthcare work stool" },
+      stools: { title: "Work Chairs", subtitle: "Professional seating", products: ["Medical Stools", "Operator Stools", "Height-adjustable Seating"], imageAlt: "Chrome height-adjustable healthcare work chair" },
       maternity: { title: "Maternity", subtitle: "Maternity care solutions", description: "Delivery beds, baby cots and maternity solutions." },
       protection: { title: "Face Protection", subtitle: "Clinical protection solutions", products: ["Face Shields", "Protective Films", "Accessories"], imageAlt: "Clear medical face shield" },
     },
@@ -181,6 +181,8 @@ export const en = {
       { title: "Quotes & projects", copy: "Receive a tailored proposal for individual products or complete projects." },
       { title: "After-sales support", copy: "Contact our team for product information, documentation and ongoing support." },
     ],
+    companyInformation: "Company information",
+    telephone: "Telephone",
     browse: "Browse our products",
     sendEnquiry: "Send an enquiry",
     formTitle: "How can we help?",

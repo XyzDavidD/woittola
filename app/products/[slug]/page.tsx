@@ -9,6 +9,9 @@ import ProductGallery from "./ProductGallery";
 import ProductInformation from "./ProductInformation";
 import { getPublicProduct } from "@/lib/catalogue/queries";
 import { getLocaleMessages } from "../../locales/server";
+import { getMessages } from "../../locales";
+import JsonLd from "../../components/JsonLd";
+import { absoluteUrl, breadcrumbJsonLd, publicPageMetadata, WEBSITE_ID } from "@/lib/seo";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -18,14 +21,16 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { locale, messages } = await getLocaleMessages();
-  const product = await getPublicProduct(slug, locale);
+  const messages = await getMessages("fi");
+  const product = await getPublicProduct(slug, "fi");
   if (!product) return { title: messages.product.fallbackTitle };
 
-  return {
+  return publicPageMetadata({
     title: `${product.translation.name} | Woittola Healthcare`,
     description: product.translation.description,
-  };
+    pathname: `/products/${product.slug}`,
+    image: product.primaryImageUrl || undefined,
+  });
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
@@ -35,9 +40,51 @@ export default async function ProductPage({ params }: ProductPageProps) {
   if (!product) notFound();
 
   const images = [product.primaryImageUrl, ...product.galleryUrls].filter((value, index, values) => value && values.indexOf(value) === index);
+  const productUrl = absoluteUrl(`/products/${product.slug}`);
+  const productId = `${productUrl}#product`;
 
   return (
     <main className="home-page product-detail-page">
+      <JsonLd data={[
+        breadcrumbJsonLd([
+          { name: messages.header.home, pathname: "/" },
+          { name: messages.header.products, pathname: "/catalogue" },
+          { name: product.categoryName, pathname: `/catalogue/${product.categorySlug}` },
+          { name: product.translation.name, pathname: `/products/${product.slug}` },
+        ]),
+        {
+          "@context": "https://schema.org",
+          "@type": "ItemPage",
+          "@id": `${productUrl}#webpage`,
+          url: productUrl,
+          name: product.translation.name,
+          description: product.translation.description,
+          inLanguage: locale === "fi" ? "fi-FI" : "en",
+          isPartOf: { "@id": WEBSITE_ID },
+          mainEntity: { "@id": productId },
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "@id": productId,
+          url: productUrl,
+          name: product.translation.name,
+          description: product.translation.description,
+          image: images.map(absoluteUrl),
+          category: product.categoryName,
+          brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
+          audience: {
+            "@type": "Audience",
+            audienceType: "Terveydenhuollon ammattilaiset",
+          },
+          additionalProperty: product.translation.specifications.map((specification) => ({
+            "@type": "PropertyValue",
+            name: specification.label,
+            value: specification.value,
+          })),
+          mainEntityOfPage: { "@id": `${productUrl}#webpage` },
+        },
+      ]} />
       <SiteHeader activePage="products" />
 
       <div className="product-detail-shell">

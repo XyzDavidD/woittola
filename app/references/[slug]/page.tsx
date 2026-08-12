@@ -6,7 +6,10 @@ import { ArrowLeft } from "lucide-react";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 import { getLocaleMessages } from "../../locales/server";
+import { getMessages } from "../../locales";
 import { getPublicReferenceProject } from "@/lib/references/queries";
+import JsonLd from "../../components/JsonLd";
+import { absoluteUrl, ORGANIZATION_ID, publicPageMetadata, WEBSITE_ID } from "@/lib/seo";
 
 type ProjectPageProps = { params: Promise<{ slug: string }> };
 
@@ -14,10 +17,15 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { locale, messages } = await getLocaleMessages();
-  const project = await getPublicReferenceProject(slug, locale);
+  const messages = await getMessages("fi");
+  const project = await getPublicReferenceProject(slug, "fi");
   if (!project) return { title: messages.metadata.referencesTitle };
-  return { title: project.translation.metaTitle, description: project.translation.metaDescription };
+  return publicPageMetadata({
+    title: project.translation.metaTitle || `${project.translation.title} | Woittola`,
+    description: project.translation.metaDescription || project.translation.summary,
+    pathname: `/references/${project.slug}`,
+    image: project.coverImageUrl || undefined,
+  });
 }
 
 export default async function ReferenceProjectPage({ params }: ProjectPageProps) {
@@ -26,9 +34,35 @@ export default async function ReferenceProjectPage({ params }: ProjectPageProps)
   const project = await getPublicReferenceProject(slug, locale);
   if (!project) notFound();
   const t = messages.references;
+  const projectUrl = absoluteUrl(`/references/${project.slug}`);
 
   return (
     <main className="home-page reference-detail-page">
+      <JsonLd data={[
+        {
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "@id": `${projectUrl}#webpage`,
+          url: projectUrl,
+          name: project.translation.title,
+          description: project.translation.summary,
+          inLanguage: locale === "fi" ? "fi-FI" : "en",
+          isPartOf: { "@id": WEBSITE_ID },
+          mainEntity: { "@id": `${projectUrl}#article` },
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "@id": `${projectUrl}#article`,
+          headline: project.translation.title,
+          description: project.translation.summary,
+          image: project.coverImageUrl ? absoluteUrl(project.coverImageUrl) : undefined,
+          dateModified: project.updatedAt,
+          inLanguage: locale === "fi" ? "fi-FI" : "en",
+          mainEntityOfPage: { "@id": `${projectUrl}#webpage` },
+          publisher: { "@id": ORGANIZATION_ID },
+        },
+      ]} />
       <SiteHeader activePage="references" />
       <div className="reference-detail-shell">
         <section className="reference-detail-hero">

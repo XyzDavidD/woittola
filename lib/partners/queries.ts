@@ -14,6 +14,7 @@ type PartnerRow = {
   id: string;
   code: string;
   image_url: string;
+  is_published: boolean;
   sort_order: number;
   translation_status: TranslationStatus;
   translation_error?: string | null;
@@ -24,7 +25,7 @@ type PartnerRow = {
 };
 
 const partnerSelect = `
-  id, code, image_url, sort_order, translation_status, translation_error,
+  id, code, image_url, is_published, sort_order, translation_status, translation_error,
   translated_at, translation_source_updated_at, updated_at,
   partner_translations (locale, title, description)
 `;
@@ -42,6 +43,7 @@ function mapPartner(row: PartnerRow): Partner {
     id: row.id,
     code: row.code,
     imageUrl: row.image_url ?? "",
+    isPublished: row.is_published ?? true,
     sortOrder: row.sort_order,
     translationStatus: row.translation_status ?? "ready",
     translationError: row.translation_error ?? "",
@@ -60,7 +62,7 @@ function localizedPartner(partner: Partner, locale: CatalogueLocale) {
 }
 
 function localPartners(locale: CatalogueLocale): PublicPartner[] {
-  return partnerPlaceholders.flatMap((partner) => {
+  return partnerPlaceholders.filter((partner) => partner.isPublished).flatMap((partner) => {
     const translation = localizedPartner(partner, locale);
     return translation ? [{ ...partner, translation }] : [];
   });
@@ -70,6 +72,7 @@ export async function getPublicPartners(locale: CatalogueLocale): Promise<Public
   const { data, error } = await createPublicClient()
     .from("partners")
     .select(partnerSelect)
+    .eq("is_published", true)
     .order("sort_order", { ascending: true });
   if (error) return localPartners(locale);
   return (data as unknown as PartnerRow[]).flatMap((row) => {

@@ -25,6 +25,8 @@ export type CatalogueCategory = {
   id: string;
   slug: string;
   heroImageUrl: string;
+  homepageImageUrl: string;
+  finnishNameOverride: string;
   sortOrder: number;
   isPublished: boolean;
   translationStatus: TranslationStatus;

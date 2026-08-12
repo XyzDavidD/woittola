@@ -36,6 +36,8 @@ type CategoryRow = {
   id: string;
   slug: string;
   hero_image_url: string;
+  homepage_image_url?: string | null;
+  finnish_name_override?: string | null;
   sort_order: number;
   is_published: boolean;
   translation_status: TranslationStatus;
@@ -74,6 +76,8 @@ const adminCategorySelect = `
   id,
   slug,
   hero_image_url,
+  homepage_image_url,
+  finnish_name_override,
   sort_order,
   is_published,
   translation_status,
@@ -129,6 +133,8 @@ const publicCategorySelect = `
   id,
   slug,
   hero_image_url,
+  homepage_image_url,
+  finnish_name_override,
   sort_order,
   is_published,
   translation_status,
@@ -210,6 +216,8 @@ function mapCategory(row: CategoryRow): CatalogueCategory {
     id: row.id,
     slug: row.slug,
     heroImageUrl: row.hero_image_url,
+    homepageImageUrl: row.homepage_image_url ?? "",
+    finnishNameOverride: row.finnish_name_override ?? "",
     sortOrder: row.sort_order,
     isPublished: row.is_published,
     translationStatus: row.translation_status ?? "ready",

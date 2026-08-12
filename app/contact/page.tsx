@@ -2,31 +2,58 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import {
   ArrowRight,
+  Building2,
   ChevronRight,
   Clock3,
   FileText,
   Headphones,
   Mail,
+  MapPin,
   PackageSearch,
+  Phone,
 } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import ContactForm from "../components/ContactForm";
 import { getLocaleMessages } from "../locales/server";
+import { getMessages } from "../locales";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/site";
+import JsonLd from "../components/JsonLd";
+import { absoluteUrl, breadcrumbJsonLd, ORGANIZATION_ID, publicPageMetadata, WEBSITE_ID } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { messages } = await getLocaleMessages();
-  return { title: messages.metadata.contactTitle, description: messages.metadata.contactDescription };
+  const messages = await getMessages("fi");
+  return publicPageMetadata({
+    title: messages.metadata.contactTitle,
+    description: messages.metadata.contactDescription,
+    pathname: "/contact",
+  });
 }
 
 export default async function ContactPage() {
-  const { messages } = await getLocaleMessages();
+  const { locale, messages } = await getLocaleMessages();
   const t = messages.contact;
   const optionIcons = [PackageSearch, FileText, Headphones];
 
   return (
     <main className="contact-page">
+      <JsonLd data={[
+        breadcrumbJsonLd([
+          { name: messages.header.home, pathname: "/" },
+          { name: t.title, pathname: "/contact" },
+        ]),
+        {
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          "@id": `${absoluteUrl("/contact")}#webpage`,
+          url: absoluteUrl("/contact"),
+          name: t.title,
+          description: t.lead,
+          inLanguage: locale === "fi" ? "fi-FI" : "en",
+          isPartOf: { "@id": WEBSITE_ID },
+          mainEntity: { "@id": ORGANIZATION_ID },
+        },
+      ]} />
       <SiteHeader />
 
       <section className="contact-hero" aria-labelledby="contact-title">
@@ -80,6 +107,17 @@ export default async function ContactPage() {
               </article>;
             })}
           </div>
+
+          <aside className="contact-company-card" aria-label={t.companyInformation}>
+            <div className="contact-company-heading">
+              <span><Building2 aria-hidden="true" /></span>
+              <div><p>{t.companyInformation}</p><h3>Senja Group Oy</h3><strong>Woittola Healthcare</strong></div>
+            </div>
+            <div className="contact-company-details">
+              <address><MapPin aria-hidden="true" /><span>Riipin Vanhatie 67<br />64760 Peltola<br />Finland</span></address>
+              <a href="tel:+358405371101"><Phone aria-hidden="true" /><span>{t.telephone}<strong>+358 40 537 1101</strong></span></a>
+            </div>
+          </aside>
 
           <Link className="contact-products-link" href="/catalogue">
             {t.browse} <ArrowRight aria-hidden="true" />

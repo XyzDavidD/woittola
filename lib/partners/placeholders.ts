@@ -15,6 +15,7 @@ export const partnerPlaceholders: Partner[] = profiles.map(([code, title, englis
   id: `placeholder-${code}`,
   code,
   imageUrl: "",
+  isPublished: code !== "otopront",
   sortOrder: (index + 1) * 10,
   translationStatus: "ready",
   translationError: "",

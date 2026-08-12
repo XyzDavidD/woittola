@@ -10,6 +10,7 @@ export type Partner = {
   id: string;
   code: string;
   imageUrl: string;
+  isPublished: boolean;
   sortOrder: number;
   translationStatus: TranslationStatus;
   translationError: string;

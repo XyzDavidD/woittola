@@ -10,7 +10,7 @@ export type DeepTranslated<T> = T extends string
       ? { readonly [Key in keyof T]: DeepTranslated<T[Key]> }
       : T;
 
-export const defaultLocale: Locale = "en";
+export const defaultLocale: Locale = "fi";
 export const localeCookieName = "woittola-locale";
 
 export function isLocale(value: string | undefined): value is Locale {

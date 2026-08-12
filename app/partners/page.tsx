@@ -5,11 +5,18 @@ import { ArrowRight, BadgeCheck, Factory, Globe2 } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import { getLocaleMessages } from "../locales/server";
+import { getMessages } from "../locales";
 import { getPublicPartners } from "@/lib/partners/queries";
+import JsonLd from "../components/JsonLd";
+import { absoluteUrl, publicPageMetadata, WEBSITE_ID } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { messages } = await getLocaleMessages();
-  return { title: messages.metadata.partnersTitle, description: messages.metadata.partnersDescription };
+  const messages = await getMessages("fi");
+  return publicPageMetadata({
+    title: messages.metadata.partnersTitle,
+    description: messages.metadata.partnersDescription,
+    pathname: "/partners",
+  });
 }
 
 export default async function PartnersPage() {
@@ -19,6 +26,24 @@ export default async function PartnersPage() {
 
   return (
     <main className="home-page info-page">
+      <JsonLd data={{
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "@id": `${absoluteUrl("/partners")}#webpage`,
+        url: absoluteUrl("/partners"),
+        name: t.title,
+        description: t.lead,
+        inLanguage: locale === "fi" ? "fi-FI" : "en",
+        isPartOf: { "@id": WEBSITE_ID },
+        mainEntity: {
+          "@type": "ItemList",
+          itemListElement: partners.map((partner, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: partner.translation.title,
+          })),
+        },
+      }} />
       <SiteHeader activePage="partners" />
 
       <section className="info-hero partners-page-hero">

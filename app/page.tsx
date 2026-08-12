@@ -21,6 +21,10 @@ import {
 import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
 import { getLocaleMessages } from "./locales/server";
+import { getMessages } from "./locales";
+import { getPublicCategories } from "@/lib/catalogue/queries";
+import JsonLd from "./components/JsonLd";
+import { absoluteUrl, ORGANIZATION_ID, publicPageMetadata, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 type Category = {
   slug: keyof typeof import("./locales/en").en.home.primaryCategories;
@@ -54,33 +58,65 @@ const categories: Category[] = [
   },
   {
     slug: "patient-stretchers",
-    image: "/images/chair3.png",
-    imageClass: "chair-three",
+    image: "/images/patient-stretcher-category.png",
+    imageClass: "",
     accent: "#008b99",
     icon: Bed,
   },
   {
     slug: "medical-carts",
-    image: "/images/chair3.png",
-    imageClass: "chair-three",
+    image: "/images/medical-cart-category.png",
+    imageClass: "",
     accent: "#c81d2b",
     icon: Hospital,
   },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { messages } = await getLocaleMessages();
-  return { title: messages.metadata.homeTitle, description: messages.metadata.homeDescription };
+  const messages = await getMessages("fi");
+  return publicPageMetadata({
+    title: messages.metadata.homeTitle,
+    description: messages.metadata.homeDescription,
+    pathname: "/",
+  });
 }
 
 export default async function HomePage() {
-  const { messages } = await getLocaleMessages();
+  const { locale, messages } = await getLocaleMessages();
+  const managedCategories = await getPublicCategories(locale);
+  const managedCategoryBySlug = new Map(managedCategories.map((category) => [category.slug, category]));
+  const homepageImage = (slug: string, fallback: string) => {
+    const category = managedCategoryBySlug.get(slug);
+    return category?.homepageImageUrl
+      || category?.products.find((product) => product.primaryImageUrl)?.primaryImageUrl
+      || fallback;
+  };
+  const homepageTitle = (slug: string, fallback: string) => managedCategoryBySlug.get(slug)?.translation.name || fallback;
+  const homepageProducts = (slug: string, fallback: readonly string[]) => {
+    const products = managedCategoryBySlug.get(slug)?.products.slice(0, 4).map((product) => product.translation.name) ?? [];
+    return products.length ? products : fallback;
+  };
   const t = messages.home;
   const trustIcons = [ShieldCheck, BadgeCheck, CirclePlus];
   const whyIcons = [ShieldCheck, UsersRound, Headphones, FileText];
 
   return (
     <main className="home-page">
+      <JsonLd data={[
+        organizationJsonLd(),
+        websiteJsonLd(),
+        {
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "@id": `${absoluteUrl("/")}#webpage`,
+          url: absoluteUrl("/"),
+          name: messages.metadata.homeTitle,
+          description: messages.metadata.homeDescription,
+          inLanguage: locale === "fi" ? "fi-FI" : "en",
+          isPartOf: { "@id": `${absoluteUrl("/")}#website` },
+          about: { "@id": ORGANIZATION_ID },
+        },
+      ]} />
       <SiteHeader activePage="home" />
 
       <section className="hero-section">
@@ -119,22 +155,28 @@ export default async function HomePage() {
       </section>
 
       <section className="category-section" aria-label={t.categorySectionAria}>
+        <div className="homepage-category-flow">
         <div className="category-grid">
           {categories.map((category) => {
+            const managedCategory = managedCategoryBySlug.get(category.slug);
             const Icon = category.icon;
-            const title = messages.categoryNames[category.slug];
-            const products = t.primaryCategories[category.slug].products;
+            const title = homepageTitle(category.slug, messages.categoryNames[category.slug]);
+            const products = homepageProducts(category.slug, t.primaryCategories[category.slug].products);
+            const image = homepageImage(category.slug, category.image);
+            const usesManagedImage = Boolean(managedCategory?.homepageImageUrl || managedCategory?.products.some((product) => product.primaryImageUrl));
 
             return <article className="category-card" key={category.slug}>
-                <div className={`category-image ${category.imageClass}`}>
-                  <Image
-                    src={category.image}
-                    alt={title}
-                    fill
-                    sizes="(min-width: 1100px) 220px, (min-width: 640px) 45vw, 90vw"
-                    loading="eager"
-                    unoptimized
-                  />
+                <div className={`category-image ${usesManagedImage ? "managed-category-image" : category.imageClass}`}>
+                  {image ? (
+                    <Image
+                      src={image}
+                      alt={title}
+                      fill
+                      sizes="(min-width: 1100px) 220px, (min-width: 640px) 45vw, 90vw"
+                      loading="eager"
+                      unoptimized
+                    />
+                  ) : null}
                   <div className="category-icon" style={{ backgroundColor: category.accent }}>
                     <Icon size={30} strokeWidth={1.9} aria-hidden="true" />
                   </div>
@@ -165,7 +207,7 @@ export default async function HomePage() {
           <article className="secondary-card secondary-product-card">
             <div className="secondary-media medical-table-media">
               <Image
-                src="/images/medical-table-generated.png"
+                src={homepageImage("medical-tables", "/images/medical-table-generated.png")}
                 alt={t.secondary.medicalTables.imageAlt}
                 fill
                 sizes="(min-width: 1100px) 300px, (min-width: 640px) 45vw, 90vw"
@@ -177,10 +219,10 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="secondary-content">
-              <h2>{t.secondary.medicalTables.title}</h2>
+              <h2>{homepageTitle("medical-tables", t.secondary.medicalTables.title)}</h2>
               <p className="secondary-maker">{t.secondary.medicalTables.subtitle}</p>
               <ul>
-                {t.secondary.medicalTables.products.map((product) => <li key={product}>{product}</li>)}
+                {homepageProducts("medical-tables", t.secondary.medicalTables.products).map((product) => <li key={product}>{product}</li>)}
               </ul>
               <Link className="secondary-link teal-link" href="/catalogue/medical-tables">
                 {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
@@ -207,7 +249,7 @@ export default async function HomePage() {
           <article className="secondary-card secondary-product-card">
             <div className="secondary-media work-stools-media">
               <Image
-                src="/images/work-stool.jpg"
+                src={homepageImage("work-stools", "/images/work-stool.jpg")}
                 alt={t.secondary.stools.imageAlt}
                 fill
                 sizes="(min-width: 1100px) 220px, (min-width: 640px) 45vw, 90vw"
@@ -218,10 +260,10 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="secondary-content">
-              <h2>{t.secondary.stools.title}</h2>
+              <h2>{homepageTitle("work-stools", t.secondary.stools.title)}</h2>
               <p className="secondary-maker">{t.secondary.stools.subtitle}</p>
               <ul>
-                {t.secondary.stools.products.map((product) => <li key={product}>{product}</li>)}
+                {homepageProducts("work-stools", t.secondary.stools.products).map((product) => <li key={product}>{product}</li>)}
               </ul>
               <Link className="secondary-link navy-link" href="/catalogue/work-stools">
                 {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
@@ -248,7 +290,7 @@ export default async function HomePage() {
           <article className="secondary-card secondary-product-card">
             <div className="secondary-media protection-media">
               <Image
-                src="/images/face-protection-generated.png"
+                src={homepageImage("face-protection", "/images/face-protection-generated.png")}
                 alt={t.secondary.protection.imageAlt}
                 fill
                 sizes="(min-width: 1100px) 300px, (min-width: 640px) 45vw, 90vw"
@@ -259,16 +301,17 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="secondary-content compact-secondary-content">
-              <h2>{t.secondary.protection.title}</h2>
+              <h2>{homepageTitle("face-protection", t.secondary.protection.title)}</h2>
               <p className="secondary-maker">{t.secondary.protection.subtitle}</p>
               <ul>
-                {t.secondary.protection.products.map((product) => <li key={product}>{product}</li>)}
+                {homepageProducts("face-protection", t.secondary.protection.products).map((product) => <li key={product}>{product}</li>)}
               </ul>
               <Link className="secondary-link navy-link" href="/catalogue/face-protection">
                 {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </article>
+        </div>
         </div>
       </section>
 

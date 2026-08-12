@@ -93,7 +93,9 @@ type CategoryDraft = {
   name: string;
   heroTitle: string;
   heroDescription: string;
+  finnishNameOverride: string;
   heroImage: UploadAsset[];
+  homepageImage: UploadAsset[];
   isPublished: boolean;
 };
 
@@ -331,7 +333,7 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
           ))}
           <div className="admin-editor-tip">
             <Languages aria-hidden="true" />
-            <p><strong>Write in English.</strong> Finnish is generated automatically after saving. Only the title, description and one image are required.</p>
+            <p><strong>Write in English.</strong> Finnish is generated automatically using professional terminology commonly used by Finnish hospitals and healthcare professionals.</p>
           </div>
         </nav>
 
@@ -482,7 +484,9 @@ function CategoryEditor({ category, onCancel, onSave }: CategoryEditorProps) {
     name: category.name,
     heroTitle: category.heroTitle,
     heroDescription: category.heroDescription,
+    finnishNameOverride: category.finnishNameOverride,
     heroImage: category.heroImageUrl ? [{ name: category.heroImageUrl.split("/").at(-1) ?? "hero image", url: category.heroImageUrl }] : [],
+    homepageImage: category.homepageImageUrl ? [{ name: category.homepageImageUrl.split("/").at(-1) ?? "homepage image", url: category.homepageImageUrl }] : [],
     isPublished: category.isPublished,
   });
   const [saving, setSaving] = useState(false);
@@ -508,17 +512,35 @@ function CategoryEditor({ category, onCancel, onSave }: CategoryEditorProps) {
 
         <div className="admin-category-editor-body">
           <div className="admin-category-language-section">
-            <div className="admin-category-language-heading"><span>EN</span><div><h3>Category content</h3><p>Finnish will be created automatically with Gemini</p></div></div>
+            <div className="admin-category-language-heading"><span>EN</span><div><h3>Category content</h3><p>Finnish is generated with professional healthcare terminology, not literal translation</p></div></div>
             <div className="admin-form-grid">
               <label className="admin-field"><span>Category name *</span><input value={draft.name} onChange={(event) => update("name", event.target.value)} /></label>
               <label className="admin-field"><span>Hero title *</span><input value={draft.heroTitle} onChange={(event) => update("heroTitle", event.target.value)} /></label>
             </div>
             <label className="admin-field admin-full-field"><span>Hero description *</span><textarea rows={4} value={draft.heroDescription} onChange={(event) => update("heroDescription", event.target.value)} /></label>
+            <label className="admin-field admin-full-field admin-finnish-override"><span>Finnish category name <small>Optional manual override</small></span><input value={draft.finnishNameOverride} placeholder="Leave empty to use automatic Finnish translation" onChange={(event) => update("finnishNameOverride", event.target.value)} /><small>When filled, this exact Finnish name is kept during future saves and translation retries.</small></label>
           </div>
 
           <div className="admin-category-language-section">
-            <div className="admin-category-language-heading"><ImagePlus aria-hidden="true" /><div><h3>Category hero image</h3><p>Used at the top of this category page</p></div></div>
-            <UploadField icon={ImagePlus} title="Upload hero image" description="JPG, PNG, WebP or AVIF · Recommended 2000 × 900 px" accept="image/*" files={draft.heroImage} onFiles={(files) => update("heroImage", files.slice(0, 1))} />
+            <div className="admin-category-language-heading"><ImagePlus aria-hidden="true" /><div><h3>Category page hero image</h3><p>Used only as the wide banner at the top of this category page</p></div></div>
+            {draft.heroImage[0]?.url ? (
+              <div className="admin-category-image-preview">
+                <Image src={draft.heroImage[0].url} alt={`${draft.name} current hero image`} fill sizes="760px" unoptimized />
+                <span>Current hero image</span>
+              </div>
+            ) : null}
+            <UploadField icon={ImagePlus} title="Change hero image" description="JPG, PNG, WebP or AVIF · A wide landscape image works best" accept="image/*" files={draft.heroImage} onFiles={(files) => update("heroImage", files.slice(0, 1))} />
+          </div>
+
+          <div className="admin-category-language-section">
+            <div className="admin-category-language-heading"><ImagePlus aria-hidden="true" /><div><h3>Homepage category image</h3><p>Used only inside this category’s card on the landing page</p></div></div>
+            {draft.homepageImage[0]?.url ? (
+              <div className="admin-category-image-preview admin-category-card-image-preview">
+                <Image src={draft.homepageImage[0].url} alt={`${draft.name} current homepage card image`} fill sizes="760px" unoptimized />
+                <span>Current homepage image</span>
+              </div>
+            ) : null}
+            <UploadField icon={ImagePlus} title="Change homepage image" description="JPG, PNG, WebP or AVIF · The complete image remains visible inside the card" accept="image/*" files={draft.homepageImage} onFiles={(files) => update("homepageImage", files.slice(0, 1))} />
             <label className="admin-category-publish-toggle"><input type="checkbox" checked={draft.isPublished} onChange={(event) => update("isPublished", event.target.checked)} /><span>Category is visible on the website</span></label>
           </div>
         </div>
@@ -767,8 +789,10 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
   const handleSaveCategory = async (draft: CategoryDraft) => {
     try {
       const heroUrls = await uploadAssets(draft.heroImage, `categories/${draft.slug}`);
+      const homepageUrls = await uploadAssets(draft.homepageImage, `categories/${draft.slug}/homepage`);
       const existing = categories.find((category) => category.id === draft.id);
       const heroImageUrl = heroUrls[0] || existing?.heroImageUrl || "/images/hero-products.png";
+      const homepageImageUrl = homepageUrls[0] || existing?.homepageImageUrl || "";
       const englishTranslation = {
         locale: "en" as const,
         name: draft.name.trim(),
@@ -784,6 +808,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         data: {
           id: draft.id,
           heroImageUrl,
+          homepageImageUrl,
+          finnishNameOverride: draft.finnishNameOverride.trim(),
           isPublished: draft.isPublished,
           name: englishTranslation.name,
           heroTitle: englishTranslation.heroTitle,
@@ -800,6 +826,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         heroTitle: englishTranslation.heroTitle,
         heroDescription: englishTranslation.heroDescription,
         heroImageUrl,
+        homepageImageUrl,
+        finnishNameOverride: draft.finnishNameOverride.trim(),
         isPublished: draft.isPublished,
         translationStatus: result.translationStatus,
         translationError: result.translationError ?? "",
@@ -984,7 +1012,9 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
                     const count = categoryCount(category.id);
                     return (
                       <article key={category.id}>
-                        <span className="admin-category-icon"><LayoutGrid aria-hidden="true" /></span>
+                        <span className="admin-category-icon">
+                          {category.homepageImageUrl || category.heroImageUrl ? <Image src={category.homepageImageUrl || category.heroImageUrl} alt="" fill sizes="38px" unoptimized /> : <LayoutGrid aria-hidden="true" />}
+                        </span>
                         <div>
                           <strong>{category.name}</strong>
                           <small>{count} product{count === 1 ? "" : "s"} · {category.isPublished ? "Published" : "Hidden"}</small>

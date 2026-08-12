@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, ArrowLeft, Check, CircleCheck, ExternalLink, Factory, ImagePlus, Languages, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, CircleCheck, ExternalLink, Eye, EyeOff, Factory, ImagePlus, Languages, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
 import type { Partner } from "@/lib/partners/types";
 
 type UploadAsset = { name: string; url?: string; file?: File };
-type PartnerDraft = { id?: string; title: string; description: string; image: UploadAsset[] };
+type PartnerDraft = { id?: string; title: string; description: string; image: UploadAsset[]; isPublished: boolean };
 type PartnerManagerProps = {
   partners: Partner[];
   onPartnersChange: (partners: Partner[]) => void;
@@ -23,6 +23,7 @@ function createDraft(partner?: Partner): PartnerDraft {
     title: english?.title ?? "",
     description: english?.description ?? "",
     image: partner?.imageUrl ? [{ name: partner.imageUrl.split("/").at(-1) ?? "partner image", url: partner.imageUrl }] : [],
+    isPublished: partner?.isPublished ?? false,
   };
 }
 
@@ -58,6 +59,7 @@ function PartnerEditor({ partner, onCancel, onSaved }: { partner?: Partner; onCa
           data: {
             id: draft.id ?? null,
             imageUrl,
+            isPublished: draft.isPublished,
             title: draft.title.trim(),
             description: draft.description.trim(),
           },
@@ -67,6 +69,7 @@ function PartnerEditor({ partner, onCancel, onSaved }: { partner?: Partner; onCa
         id: data.entityId,
         code: partner?.code ?? draft.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
         imageUrl,
+        isPublished: draft.isPublished,
         sortOrder: partner?.sortOrder ?? 0,
         translationStatus: data.translationStatus,
         translationError: data.translationError ?? "",
@@ -94,6 +97,7 @@ function PartnerEditor({ partner, onCancel, onSaved }: { partner?: Partner; onCa
     <section className="admin-form-card admin-partner-form-card">
       <div className="admin-form-heading"><span><Factory aria-hidden="true" /></span><div><p>Partner profile</p><h2>Company information</h2><small>The title and description are required. The logo or image is optional.</small></div></div>
       <div className="admin-project-language-note"><Languages aria-hidden="true" /><span><strong>English source content</strong><small>Finnish will be generated securely after saving.</small></span></div>
+      <label className="admin-partner-visibility-toggle"><input type="checkbox" checked={draft.isPublished} onChange={(event) => setDraft((current) => ({ ...current, isPublished: event.target.checked }))} /><span><strong>Show partner on the public website</strong><small>Turn this off while discussions or agreements are still pending.</small></span></label>
       <label className="admin-field"><span>Partner title *</span><input value={draft.title} placeholder="e.g. GREINER" onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} /></label>
       <label className="admin-field"><span>Partner description *</span><textarea rows={7} value={draft.description} placeholder="Introduce the company, its history and specialist expertise." onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} /></label>
       <div className="admin-field-section">
@@ -139,17 +143,25 @@ export default function PartnerManager({ partners, onPartnersChange, databaseErr
     setMessage("Partner deleted from Supabase");
   };
 
+  const toggleVisibility = async (partner: Partner) => {
+    const nextVisibility = !partner.isPublished;
+    const { error } = await createClient().from("partners").update({ is_published: nextVisibility }).eq("id", partner.id);
+    if (error) { setMessage(error.message); return; }
+    onPartnersChange(partners.map((item) => item.id === partner.id ? { ...item, isPublished: nextVisibility } : item));
+    setMessage(`${partner.translations.en?.title || "Partner"} is now ${nextVisibility ? "visible" : "hidden"} on the public website`);
+  };
+
   return <div className="admin-page-content admin-partner-management">
     {databaseError ? <div className="admin-database-notice"><AlertTriangle aria-hidden="true" /><div><strong>Partner database setup required</strong><p>{databaseError}</p></div></div> : null}
     {message ? <div className="admin-project-message"><CircleCheck aria-hidden="true" />{message}<button type="button" onClick={() => setMessage("")}><X aria-hidden="true" /></button></div> : null}
     <section className="admin-management-card">
-      <div className="admin-management-heading"><div><h2>Manufacturing partners</h2><p>{partners.length} partner{partners.length === 1 ? "" : "s"} · English source with automatic Finnish translation</p></div><button className="admin-inline-add-product" type="button" onClick={() => setEditing(null)}><Plus aria-hidden="true" />Add new partner</button></div>
+      <div className="admin-management-heading"><div><h2>Manufacturing partners</h2><p>{partners.filter((partner) => partner.isPublished).length} visible · {partners.filter((partner) => !partner.isPublished).length} hidden</p></div><button className="admin-inline-add-product" type="button" onClick={() => setEditing(null)}><Plus aria-hidden="true" />Add new partner</button></div>
       {partners.length ? <div className="admin-partner-grid">{partners.map((partner) => {
         const english = partner.translations.en;
-        return <article key={partner.id}>
+        return <article className={partner.isPublished ? "" : "is-hidden"} key={partner.id}>
           <div className="admin-partner-image">{partner.imageUrl ? <Image src={partner.imageUrl} alt="" fill sizes="180px" unoptimized /> : <Factory aria-hidden="true" />}</div>
-          <div className="admin-partner-copy"><h3>{english?.title || partner.code}</h3><p>{english?.description}</p><div className={`admin-reference-translation ${partner.translationStatus}`}>{partner.translationStatus === "ready" ? <CircleCheck aria-hidden="true" /> : <Languages aria-hidden="true" />}Finnish: {partner.translationStatus}{partner.translationStatus === "failed" ? <button type="button" disabled={retrying.includes(partner.id)} onClick={() => retry(partner)}><RefreshCw aria-hidden="true" />{retrying.includes(partner.id) ? "Retrying…" : "Retry"}</button> : null}</div></div>
-          <footer><button type="button" onClick={() => setEditing(partner)}><Pencil aria-hidden="true" />Edit</button><Link href="/partners" target="_blank"><ExternalLink aria-hidden="true" />View</Link><button className="danger" type="button" onClick={() => remove(partner)}><Trash2 aria-hidden="true" />Delete</button></footer>
+          <div className="admin-partner-copy"><div className={`admin-partner-visibility ${partner.isPublished ? "published" : "hidden"}`}>{partner.isPublished ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}{partner.isPublished ? "Visible" : "Hidden"}</div><h3>{english?.title || partner.code}</h3><p>{english?.description}</p><div className={`admin-reference-translation ${partner.translationStatus}`}>{partner.translationStatus === "ready" ? <CircleCheck aria-hidden="true" /> : <Languages aria-hidden="true" />}Finnish: {partner.translationStatus}{partner.translationStatus === "failed" ? <button type="button" disabled={retrying.includes(partner.id)} onClick={() => retry(partner)}><RefreshCw aria-hidden="true" />{retrying.includes(partner.id) ? "Retrying…" : "Retry"}</button> : null}</div></div>
+          <footer><button type="button" onClick={() => setEditing(partner)}><Pencil aria-hidden="true" />Edit</button><button type="button" onClick={() => toggleVisibility(partner)}>{partner.isPublished ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}{partner.isPublished ? "Hide" : "Show"}</button>{partner.isPublished ? <Link href="/partners" target="_blank"><ExternalLink aria-hidden="true" />View</Link> : null}<button className="danger" type="button" onClick={() => remove(partner)}><Trash2 aria-hidden="true" />Delete</button></footer>
         </article>;
       })}</div> : <div className="admin-empty-state"><Factory aria-hidden="true" /><h3>No partners yet</h3><p>Add the first manufacturing partner and its company introduction.</p><button type="button" onClick={() => setEditing(null)}>Add a partner</button></div>}
     </section>

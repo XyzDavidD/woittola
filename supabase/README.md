@@ -26,6 +26,16 @@ uses Gemini to create validated Finnish JSON, and records its status. A failed
 translation preserves English and causes the Finnish public page to fall back
 to English until an administrator retries it.
 
+## Category images
+
+Open `/dashboard`, choose **Categories**, and edit a category. Each category has
+two independent images: **Category page hero image** controls the wide banner on
+the category page, while **Homepage category image** controls only its landing
+page card. Apply migration `202608170001_category_homepage_images.sql` before
+deploying the website version that exposes these separate fields. The optional
+**Finnish category name** field preserves an approved manual term through later
+saves and automatic-translation retries.
+
 ## Adding reference projects
 
 Open `/dashboard`, choose **References → Add new project**, and enter the
@@ -50,6 +60,8 @@ company title and introduction. A logo or representative image is optional and
 can be added, replaced, or removed later. Saving writes English first and uses
 the authenticated Edge Function to generate the Finnish title and description.
 Partners can be edited or permanently deleted from the same dashboard section.
+They can also be hidden without deletion and shown again later; new partners are
+hidden by default until the administrator enables public visibility.
 If Finnish translation fails, the public partners page displays the English
 content until an administrator retries it.
 
