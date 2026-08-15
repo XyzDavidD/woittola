@@ -14,6 +14,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 106px;
 }
 
 body {
@@ -42,16 +43,20 @@ summary {
 
 .home-page {
   min-width: 320px;
-  overflow: hidden;
+  overflow: clip;
   background: #ffffff;
 }
 
 .site-header {
-  position: relative;
-  z-index: 20;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   height: 90px;
   background: rgba(255, 255, 255, 0.98);
   border-bottom: 1px solid rgba(224, 229, 235, 0.7);
+  box-shadow: 0 4px 18px rgba(7, 28, 56, 0.06);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 
 .nav-shell {
@@ -504,6 +509,15 @@ summary {
 .category-image.managed-category-image img {
   object-position: center;
   transform: none;
+}
+
+/* These three source images are portrait canvases with generous empty space
+   above and below the product. Crop that whitespace inside the card, then add
+   a restrained zoom that keeps each complete chair inside the frame. */
+.category-image:is(.chair-one, .chair-two, .chair-three) img {
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.16);
 }
 
 .category-icon {
@@ -3223,7 +3237,7 @@ summary {
 .contact-page {
   min-width: 320px;
   min-height: 100vh;
-  overflow: hidden;
+  overflow: clip;
   background: #f7f9fb;
 }
 
@@ -3768,6 +3782,10 @@ summary {
 }
 
 @media (max-width: 850px) {
+  html {
+    scroll-padding-top: 92px;
+  }
+
   .site-header {
     height: 76px;
   }
@@ -5514,16 +5532,28 @@ summary {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid #edc8c8;
+  border: 1px solid #c7d9e9;
   border-radius: 6px;
-  background: #fff7f7;
-  color: #9f3d3d;
+  background: #f4f8fc;
+  color: #285f91;
   font: inherit;
   cursor: pointer;
 }
 
 .admin-translation-status > button:hover,
 .admin-translation-status > button:focus-visible {
+  border-color: #8eafd0;
+  background: #eaf2f9;
+}
+
+.admin-translation-status.failed > button {
+  border-color: #edc8c8;
+  background: #fff7f7;
+  color: #9f3d3d;
+}
+
+.admin-translation-status.failed > button:hover,
+.admin-translation-status.failed > button:focus-visible {
   border-color: #dba3a3;
   background: #fff0f0;
 }
@@ -8004,6 +8034,35 @@ summary {
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.2px;
+}
+
+.admin-category-image-remove {
+  min-height: 38px;
+  margin: -2px 0 14px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #e5c7c7;
+  border-radius: 7px;
+  background: #fff8f8;
+  color: #a53a3a;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.admin-category-image-remove:hover,
+.admin-category-image-remove:focus-visible {
+  border-color: #cf8585;
+  background: #fff0f0;
+}
+
+.admin-category-image-remove svg {
+  width: 15px;
+  height: 15px;
 }
 
 .admin-category-publish-toggle {
@@ -10555,6 +10614,10 @@ summary {
    Content-heavy forms and editorial copy remain single-column; repeatable
    cards use two columns so phone screens show more useful content at once. */
 @media (max-width: 560px) {
+  html {
+    scroll-padding-top: 76px;
+  }
+
   .site-header {
     height: 62px;
   }

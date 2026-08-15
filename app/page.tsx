@@ -92,10 +92,6 @@ export default async function HomePage() {
       || fallback;
   };
   const homepageTitle = (slug: string, fallback: string) => managedCategoryBySlug.get(slug)?.translation.name || fallback;
-  const homepageProducts = (slug: string, fallback: readonly string[]) => {
-    const products = managedCategoryBySlug.get(slug)?.products.slice(0, 4).map((product) => product.translation.name) ?? [];
-    return products.length ? products : fallback;
-  };
   const t = messages.home;
   const trustIcons = [ShieldCheck, BadgeCheck, CirclePlus];
   const whyIcons = [ShieldCheck, UsersRound, Headphones, FileText];
@@ -161,12 +157,12 @@ export default async function HomePage() {
             const managedCategory = managedCategoryBySlug.get(category.slug);
             const Icon = category.icon;
             const title = homepageTitle(category.slug, messages.categoryNames[category.slug]);
-            const products = homepageProducts(category.slug, t.primaryCategories[category.slug].products);
+            const products = t.primaryCategories[category.slug].products;
             const image = homepageImage(category.slug, category.image);
             const usesManagedImage = Boolean(managedCategory?.homepageImageUrl || managedCategory?.products.some((product) => product.primaryImageUrl));
 
             return <article className="category-card" key={category.slug}>
-                <div className={`category-image ${usesManagedImage ? "managed-category-image" : category.imageClass}`}>
+                <div className={`category-image ${category.imageClass} ${usesManagedImage ? "managed-category-image" : ""}`}>
                   {image ? (
                     <Image
                       src={image}
@@ -222,7 +218,7 @@ export default async function HomePage() {
               <h2>{homepageTitle("medical-tables", t.secondary.medicalTables.title)}</h2>
               <p className="secondary-maker">{t.secondary.medicalTables.subtitle}</p>
               <ul>
-                {homepageProducts("medical-tables", t.secondary.medicalTables.products).map((product) => <li key={product}>{product}</li>)}
+                {t.secondary.medicalTables.products.map((product) => <li key={product}>{product}</li>)}
               </ul>
               <Link className="secondary-link teal-link" href="/catalogue/medical-tables">
                 {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
@@ -263,7 +259,7 @@ export default async function HomePage() {
               <h2>{homepageTitle("work-stools", t.secondary.stools.title)}</h2>
               <p className="secondary-maker">{t.secondary.stools.subtitle}</p>
               <ul>
-                {homepageProducts("work-stools", t.secondary.stools.products).map((product) => <li key={product}>{product}</li>)}
+                {t.secondary.stools.products.map((product) => <li key={product}>{product}</li>)}
               </ul>
               <Link className="secondary-link navy-link" href="/catalogue/work-stools">
                 {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />
@@ -304,7 +300,7 @@ export default async function HomePage() {
               <h2>{homepageTitle("face-protection", t.secondary.protection.title)}</h2>
               <p className="secondary-maker">{t.secondary.protection.subtitle}</p>
               <ul>
-                {homepageProducts("face-protection", t.secondary.protection.products).map((product) => <li key={product}>{product}</li>)}
+                {t.secondary.protection.products.map((product) => <li key={product}>{product}</li>)}
               </ul>
               <Link className="secondary-link navy-link" href="/catalogue/face-protection">
                 {t.viewProducts} <ArrowRight size={17} aria-hidden="true" />

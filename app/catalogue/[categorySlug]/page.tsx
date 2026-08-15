@@ -41,7 +41,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   if (!category) notFound();
 
   const heroStyle = {
-    backgroundImage: `url("${category.heroImageUrl}")`,
+    backgroundImage: category.heroImageUrl
+      ? `url("${category.heroImageUrl}")`
+      : "radial-gradient(circle at 84% 30%, rgba(128, 190, 224, 0.2), transparent 34%), linear-gradient(118deg, #ffffff 0%, #f5fafe 48%, #eaf5fb 100%)",
   } satisfies CSSProperties;
   const benefitIcons = [UsersRound, Sparkles, ShieldCheck, BadgeCheck];
 

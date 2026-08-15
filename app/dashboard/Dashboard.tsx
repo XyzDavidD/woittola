@@ -529,7 +529,12 @@ function CategoryEditor({ category, onCancel, onSave }: CategoryEditorProps) {
                 <span>Current hero image</span>
               </div>
             ) : null}
-            <UploadField icon={ImagePlus} title="Change hero image" description="JPG, PNG, WebP or AVIF · A wide landscape image works best" accept="image/*" files={draft.heroImage} onFiles={(files) => update("heroImage", files.slice(0, 1))} />
+            {draft.heroImage.length ? (
+              <button className="admin-category-image-remove" type="button" onClick={() => update("heroImage", [])}>
+                <Trash2 aria-hidden="true" /> Remove hero image
+              </button>
+            ) : null}
+            <UploadField icon={ImagePlus} title={draft.heroImage.length ? "Change hero image" : "Add hero image"} description="JPG, PNG, WebP or AVIF · A wide landscape image works best" accept="image/*" files={draft.heroImage} onFiles={(files) => update("heroImage", files.slice(0, 1))} />
           </div>
 
           <div className="admin-category-language-section">
@@ -620,19 +625,21 @@ type TranslationStatusProps = {
   error: string;
   retrying: boolean;
   onRetry: () => void;
+  allowRefresh?: boolean;
 };
 
-function TranslationStatusBadge({ status, error, retrying, onRetry }: TranslationStatusProps) {
+function TranslationStatusBadge({ status, error, retrying, onRetry, allowRefresh = false }: TranslationStatusProps) {
   const label = status === "ready" ? "Finnish ready" : status === "processing" ? "Translating" : "Translation failed";
   const Icon = status === "ready" ? CircleCheck : status === "processing" ? LoaderCircle : AlertTriangle;
+  const showRetry = status === "failed" || (status === "ready" && allowRefresh);
 
   return (
     <span className={`admin-translation-status ${status}`} title={error || label}>
       <Icon className={status === "processing" ? "spin" : ""} aria-hidden="true" />
       <span>{label}</span>
-      {status === "failed" ? (
-        <button type="button" disabled={retrying} onClick={onRetry} aria-label="Retry Finnish translation">
-          <RefreshCw className={retrying ? "spin" : ""} aria-hidden="true" /> Retry
+      {showRetry ? (
+        <button type="button" disabled={retrying} onClick={onRetry} aria-label={status === "ready" ? "Retranslate product into Finnish" : "Retry Finnish translation"}>
+          <RefreshCw className={retrying ? "spin" : ""} aria-hidden="true" /> {status === "ready" ? "Retranslate" : "Retry"}
         </button>
       ) : null}
     </span>
@@ -791,7 +798,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
       const heroUrls = await uploadAssets(draft.heroImage, `categories/${draft.slug}`);
       const homepageUrls = await uploadAssets(draft.homepageImage, `categories/${draft.slug}/homepage`);
       const existing = categories.find((category) => category.id === draft.id);
-      const heroImageUrl = heroUrls[0] || existing?.heroImageUrl || "/images/hero-products.png";
+      const heroImageUrl = heroUrls[0] ?? "";
       const homepageImageUrl = homepageUrls[0] || existing?.homepageImageUrl || "";
       const englishTranslation = {
         locale: "en" as const,
@@ -985,6 +992,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
                           error={product.translationError}
                           retrying={retryingTranslations.includes(`product:${product.id}`)}
                           onRetry={() => handleRetryTranslation("product", product.id)}
+                          allowRefresh
                         />
                       </span>
                       <span className="admin-updated">{product.updated}</span>

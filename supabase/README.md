@@ -24,7 +24,10 @@ Product images and documents are uploaded to the public `catalogue-media`
 bucket. The authenticated `catalogue-translate` Edge Function saves English,
 uses Gemini to create validated Finnish JSON, and records its status. A failed
 translation preserves English and causes the Finnish public page to fall back
-to English until an administrator retries it.
+to English until an administrator retries it. Product titles are translated as
+well: brands and model/SKU codes remain unchanged, while descriptive title
+words use professional Finnish terminology. Use **Retranslate** beside an
+existing product after deploying an updated translation function.
 
 ## Category images
 
@@ -34,7 +37,10 @@ the category page, while **Homepage category image** controls only its landing
 page card. Apply migration `202608170001_category_homepage_images.sql` before
 deploying the website version that exposes these separate fields. The optional
 **Finnish category name** field preserves an approved manual term through later
-saves and automatic-translation retries.
+saves and automatic-translation retries. Migration
+`202608190001_category_hero_image_removal.sql` allows the category-page hero
+image to be removed from the dashboard; the category page then uses a clean
+background without a photograph.
 
 ## Adding reference projects
 
