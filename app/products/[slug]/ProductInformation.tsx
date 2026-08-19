@@ -30,17 +30,18 @@ type ProductInformationProps = {
   content: ProductTranslation;
   brochureUrl: string;
   technicalSheetUrl: string;
+  colorChartUrl: string;
   ui: DeepTranslated<Messages>["product"];
 };
 
-export default function ProductInformation({ productName, content, brochureUrl, technicalSheetUrl, ui }: ProductInformationProps) {
+export default function ProductInformation({ productName, content, brochureUrl, technicalSheetUrl, colorChartUrl, ui }: ProductInformationProps) {
   const [activeTab, setActiveTab] = useState<TabName>("overview");
   const hasOverview = Boolean(content.typicalApplications.length || content.keyFeatures.length || content.reasons.length || content.colors.length);
   const availableTabs = tabs.filter((tab) => {
     if (tab === "overview") return hasOverview;
     if (tab === "specifications") return content.specifications.length > 0;
     if (tab === "accessories") return content.accessories.length > 0;
-    if (tab === "downloads") return Boolean(brochureUrl || technicalSheetUrl);
+    if (tab === "downloads") return Boolean(brochureUrl || technicalSheetUrl || colorChartUrl);
     return true;
   });
   const displayedTab = availableTabs.includes(activeTab) ? activeTab : availableTabs[0];
@@ -103,6 +104,7 @@ export default function ProductInformation({ productName, content, brochureUrl, 
           <div className="product-download-list">
             {brochureUrl ? <a href={brochureUrl} target="_blank" rel="noreferrer"><FileText aria-hidden="true" /><span><strong>{ui.brochure}</strong><small>{ui.pdf}</small></span><Download aria-hidden="true" /></a> : null}
             {technicalSheetUrl ? <a href={technicalSheetUrl} target="_blank" rel="noreferrer"><FileText aria-hidden="true" /><span><strong>{ui.technicalSheet}</strong><small>{ui.pdf}</small></span><Download aria-hidden="true" /></a> : null}
+            {colorChartUrl ? <a href={colorChartUrl} target="_blank" rel="noreferrer"><FileText aria-hidden="true" /><span><strong>{ui.colorChart}</strong><small>{ui.pdf}</small></span><Download aria-hidden="true" /></a> : null}
           </div>
         </article> : null}
       </div>

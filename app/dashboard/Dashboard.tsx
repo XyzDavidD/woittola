@@ -34,6 +34,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
 import type { CatalogueCategory, CatalogueProduct, ColorOption, Specification } from "@/lib/catalogue/types";
+import { getYouTubeVideoId } from "@/lib/catalogue/youtube";
 import type { ReferenceProject } from "@/lib/references/types";
 import type { Partner } from "@/lib/partners/types";
 import DashboardLogoutButton from "./DashboardLogoutButton";
@@ -84,6 +85,8 @@ type ProductDraft = {
   images: UploadAsset[];
   brochure: UploadAsset[];
   technicalSheet: UploadAsset[];
+  colorChart: UploadAsset[];
+  youtubeUrl: string;
   video: UploadAsset[];
 };
 
@@ -119,6 +122,7 @@ const slugify = (value: string) =>
 
 function createDraft(categories: DashboardCategory[], product?: DashboardProduct): ProductDraft {
   const translation = product?.translations.en;
+  const hasYouTubeVideo = Boolean(product?.videoUrl && getYouTubeVideoId(product.videoUrl));
 
   return {
     id: product?.id,
@@ -138,7 +142,9 @@ function createDraft(categories: DashboardCategory[], product?: DashboardProduct
     images: product ? [product.primaryImageUrl, ...product.galleryUrls].filter(Boolean).map((url) => ({ name: url.split("/").at(-1) ?? "product image", url })) : [],
     brochure: product?.brochureUrl ? [{ name: product.brochureUrl.split("/").at(-1) ?? "brochure.pdf", url: product.brochureUrl }] : [],
     technicalSheet: product?.technicalSheetUrl ? [{ name: product.technicalSheetUrl.split("/").at(-1) ?? "technical-sheet.pdf", url: product.technicalSheetUrl }] : [],
-    video: product?.videoUrl ? [{ name: product.videoUrl.split("/").at(-1) ?? "product-video", url: product.videoUrl }] : [],
+    colorChart: product?.colorChartUrl ? [{ name: product.colorChartUrl.split("/").at(-1) ?? "color-chart.pdf", url: product.colorChartUrl }] : [],
+    youtubeUrl: hasYouTubeVideo ? product?.videoUrl ?? "" : "",
+    video: product?.videoUrl && !hasYouTubeVideo ? [{ name: product.videoUrl.split("/").at(-1) ?? "product-video", url: product.videoUrl }] : [],
   };
 }
 
@@ -391,10 +397,21 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
                   <div className="admin-section-label"><h3>Technical data sheet</h3><p>Optional second document in the Downloads tab.</p></div>
                   <UploadField icon={FileText} title="Upload data sheet" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.technicalSheet} onFiles={(files) => updateDraft("technicalSheet", files.slice(0, 1))} />
                 </div>
+                <div className="admin-field-section">
+                  <div className="admin-section-label"><h3>Color chart</h3><p>Optional PDF showing the available upholstery or finish colors.</p></div>
+                  <UploadField icon={FileText} title="Upload color chart" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.colorChart} onFiles={(files) => updateDraft("colorChart", files.slice(0, 1))} />
+                </div>
               </div>
 
               <div className="admin-field-section admin-video-section">
-                <div className="admin-section-label"><h3>Product video</h3><p>Upload the demonstration video shown on the product page.</p></div>
+                <div className="admin-section-label"><h3>Product video</h3><p>Paste a YouTube watch link or upload a video file. A YouTube link takes priority when both are provided.</p></div>
+                <div className="admin-video-copy-fields">
+                  <label className="admin-field">
+                    <span>YouTube video URL <small>Optional</small></span>
+                    <input type="url" inputMode="url" value={draft.youtubeUrl} placeholder="https://www.youtube.com/watch?v=A8KNqk9wIYM" onChange={(event) => updateDraft("youtubeUrl", event.target.value)} />
+                    <small>Supports YouTube watch, short, live and youtu.be links.</small>
+                  </label>
+                </div>
                 <UploadField icon={Video} title="Upload product video" description="MP4 or WebM · Maximum 250 MB" accept="video/mp4,video/webm" files={draft.video} onFiles={(files) => updateDraft("video", files.slice(0, 1))} />
               </div>
             </section>
@@ -620,6 +637,21 @@ async function uploadAssets(assets: UploadAsset[], folder: string) {
   return urls;
 }
 
+async function availableProductSlug(requestedSlug: string, currentProductId?: string) {
+  const base = requestedSlug || "product";
+  const supabase = createClient();
+  let query = supabase.from("products").select("id, slug").like("slug", `${base}%`);
+  if (currentProductId) query = query.neq("id", currentProductId);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const used = new Set((data ?? []).map((product) => product.slug));
+  if (!used.has(base)) return base;
+  let suffix = 2;
+  while (used.has(`${base}-${suffix}`)) suffix += 1;
+  return `${base}-${suffix}`;
+}
+
 type TranslationStatusProps = {
   status: CatalogueProduct["translationStatus"];
   error: string;
@@ -691,18 +723,24 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
 
   const handleSaveProduct = async (draft: ProductDraft, status: ProductStatus) => {
     try {
-      const slug = draft.slug || slugify(draft.name);
+      const slug = await availableProductSlug(draft.slug || slugify(draft.name), draft.id);
       const category = categories.find((item) => item.id === draft.categoryId);
       if (!category) throw new Error("Choose a valid category.");
       if (!draft.name.trim() || !draft.description.trim()) {
         throw new Error("Add the product title and description.");
       }
       if (!draft.images.length) throw new Error("Add at least one product image.");
+      const youtubeUrl = draft.youtubeUrl.trim();
+      if (youtubeUrl && !getYouTubeVideoId(youtubeUrl)) {
+        throw new Error("Add a valid YouTube watch, short, live or youtu.be link.");
+      }
 
       const imageUrls = await uploadAssets(draft.images, `products/${slug}/images`);
       const brochureUrls = await uploadAssets(draft.brochure, `products/${slug}/documents`);
       const technicalSheetUrls = await uploadAssets(draft.technicalSheet, `products/${slug}/documents`);
-      const videoUrls = await uploadAssets(draft.video, `products/${slug}/video`);
+      const colorChartUrls = await uploadAssets(draft.colorChart, `products/${slug}/documents`);
+      const videoUrls = youtubeUrl ? [] : await uploadAssets(draft.video, `products/${slug}/video`);
+      const videoUrl = youtubeUrl || videoUrls[0] || "";
       if (!imageUrls.length) throw new Error("The product image could not be saved.");
 
       const applications = cleanList(draft.applications);
@@ -735,7 +773,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
           galleryUrls: imageUrls.slice(1),
           brochureUrl: brochureUrls[0] ?? "",
           technicalSheetUrl: technicalSheetUrls[0] ?? "",
-          videoUrl: videoUrls[0] ?? "",
+          colorChartUrl: colorChartUrls[0] ?? "",
+          videoUrl,
           name: englishTranslation.name,
           description: englishTranslation.description,
           productTypeLabel: englishTranslation.productTypeLabel,
@@ -750,13 +789,14 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
       });
 
       const existing = products.find((product) => product.id === result.entityId);
+      const savedSlug = result.slug || slug;
       const now = new Date().toISOString();
       const nextCatalogueProduct: CatalogueProduct = {
         id: result.entityId,
         categoryId: category.id,
         categorySlug: category.slug,
         categoryName: category.name,
-        slug,
+        slug: savedSlug,
         brand: draft.brand.trim(),
         productType: draft.productType.trim(),
         applications,
@@ -767,7 +807,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         galleryUrls: imageUrls.slice(1),
         brochureUrl: brochureUrls[0] ?? "",
         technicalSheetUrl: technicalSheetUrls[0] ?? "",
-        videoUrl: videoUrls[0] ?? "",
+        colorChartUrl: colorChartUrls[0] ?? "",
+        videoUrl,
         translationStatus: result.translationStatus,
         translationError: result.translationError ?? "",
         translatedAt: result.translationStatus === "ready" ? now : existing?.translatedAt ?? "",

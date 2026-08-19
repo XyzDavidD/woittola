@@ -74,6 +74,7 @@ try {
         galleryUrls: [],
         brochureUrl: "",
         technicalSheetUrl: "",
+        colorChartUrl: "",
         videoUrl: "",
         name: englishName,
         description: englishDescription,
@@ -83,7 +84,10 @@ try {
         keyFeatures: ["Maximum load 120 kg"],
         reasons: ["Verifies Finnish catalogue content"],
         colors: [{ name: "Deep blue", value: "#123456" }],
-        specifications: [{ label: "Maximum load", value: "120 kg" }],
+        specifications: [
+          { label: "Maximum load", value: "120 kg" },
+          { label: "Castors", value: "Ø125 mm swivel castors (1 directional)" },
+        ],
         accessories: ["Test accessory"],
       },
     },
@@ -142,7 +146,12 @@ try {
   if (!finnish.name.includes("Woittola")) {
     throw new Error("The protected brand name changed inside the translated product title.");
   }
-  if (finnish.colors?.[0]?.value !== "#123456" || finnish.specifications?.[0]?.value !== "120 kg") {
+  if (
+    finnish.colors?.[0]?.value !== "#123456" ||
+    finnish.specifications?.[0]?.value !== "120 kg" ||
+    !finnish.specifications?.[1]?.value?.includes("125 mm") ||
+    !finnish.specifications?.[1]?.value?.includes("1")
+  ) {
     throw new Error("A protected colour value, measurement or unit changed.");
   }
 

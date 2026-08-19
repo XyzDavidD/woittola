@@ -20,6 +20,15 @@ database-backed category list. Brand, product type, applications, features,
 colors, specifications, accessories, PDFs, and video are optional. Optional
 fields left empty are not rendered on the public product page.
 
+The video field accepts either an uploaded MP4/WebM file or a YouTube watch,
+short, live, embed or `youtu.be` URL. YouTube links are rendered through a
+privacy-enhanced `youtube-nocookie.com` embed. Brochure, technical data sheet
+and color chart are separate optional PDF uploads.
+
+Product page URLs are generated automatically. When similar model names
+normalize to the same URL, the database appends `-2`, `-3` and so on instead of
+rejecting the new product.
+
 Product images and documents are uploaded to the public `catalogue-media`
 bucket. The authenticated `catalogue-translate` Edge Function saves English,
 uses Gemini to create validated Finnish JSON, and records its status. A failed
@@ -83,11 +92,11 @@ npx supabase link --project-ref mbzhczgqxtixiymxfwjp
 npx supabase migration repair 202608110001 --status applied --linked
 npx supabase db push --dry-run
 npx supabase db push
-npx supabase functions deploy catalogue-translate --project-ref mbzhczgqxtixiymxfwjp --no-verify-jwt --use-api
+npx supabase functions deploy catalogue-translate --project-ref mbzhczgqxtixiymxfwjp --use-api
 ```
 
 The dry run shows migrations that have not yet been applied, including
-`202608130001_reference_projects.sql` on a catalogue-only database. Despite the deployment flag,
-the function is not publicly usable: it validates the bearer token with
-Supabase Auth, checks `catalogue_admins`, and performs database operations
-through the verified user's RLS-protected session.
+`202608130001_reference_projects.sql` on a catalogue-only database. The Edge
+Function requires a valid user JWT at the Supabase gateway, validates the
+bearer token again with Supabase Auth, checks `catalogue_admins`, and performs
+database operations through the verified user's RLS-protected session.

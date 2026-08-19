@@ -297,6 +297,7 @@ export const fi = {
     downloadsCopy: "Tuotteen {product} viiteasiakirjat.",
     brochure: "Tuote-esite",
     technicalSheet: "Tekninen tietolehti",
+    colorChart: "Värikartta",
     pdf: "PDF-asiakirja",
     helpTitle: "Tarvitsetko apua oikean ratkaisun löytämisessä?",
     helpCopy: "Tiimimme auttaa valitsemaan tarpeisiisi parhaiten sopivan tuotteen.",

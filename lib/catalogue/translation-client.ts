@@ -52,7 +52,7 @@ function resultFromResponse(value: unknown): CatalogueTranslationResult {
 }
 
 async function readState(supabase: SupabaseClient, entityType: TranslationEntityType, entityId: string) {
-  const select = entityType === "referenceProject"
+  const select = entityType === "referenceProject" || entityType === "product"
     ? "id, translation_status, translation_error, translated_at, slug"
     : "id, translation_status, translation_error, translated_at";
   const { data, error } = await supabase
@@ -100,6 +100,21 @@ async function recoverSavedEntityId(
   return "";
 }
 
+async function invocationErrorDetails(error: unknown) {
+  const fallback = error instanceof Error ? error.message : "The translation function could not be reached.";
+  if (!error || typeof error !== "object" || !("context" in error) || !(error.context instanceof Response)) {
+    return { message: fallback, status: 0 };
+  }
+
+  const response = error.context;
+  const payload = await response.clone().json().catch(() => null) as { error?: unknown } | null;
+  const serverMessage = typeof payload?.error === "string" ? payload.error : fallback;
+  const message = serverMessage.includes("products_slug_key") || serverMessage.toLowerCase().includes("duplicate key")
+    ? "Another product already uses this page URL. Please save again so a unique URL can be generated."
+    : serverMessage;
+  return { message, status: response.status };
+}
+
 async function waitForCompletedTranslation(
   supabase: SupabaseClient,
   entityType: TranslationEntityType,
@@ -144,9 +159,14 @@ export async function invokeCatalogueTranslation(request: TranslationRequest) {
   const { data, error } = await supabase.functions.invoke("catalogue-translate", { body: request });
   if (!error) return resultFromResponse(data);
 
+  const failure = await invocationErrorDetails(error);
+  // A 4xx response is a definitive application/database rejection, not a
+  // timeout. Never recover it by finding an older row with the same slug.
+  if (failure.status >= 400 && failure.status < 500) throw new Error(failure.message);
+
   // The Edge Function may have completed after the HTTP client timed out. The
   // database is the source of truth, so recover the saved id and poll its status.
   const entityId = await recoverSavedEntityId(supabase, request);
-  if (!entityId) throw new Error(error.message || "The translation function could not be reached.");
+  if (!entityId) throw new Error(failure.message);
   return waitForCompletedTranslation(supabase, request.entityType, entityId, previous);
 }

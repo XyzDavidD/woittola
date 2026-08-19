@@ -63,6 +63,7 @@ type ProductRow = {
   gallery_urls: string[];
   brochure_url: string | null;
   technical_sheet_url: string | null;
+  color_chart_url: string | null;
   video_url: string | null;
   translation_status: TranslationStatus;
   translation_error?: string | null;
@@ -107,6 +108,7 @@ const adminCategorySelect = `
     gallery_urls,
     brochure_url,
     technical_sheet_url,
+    color_chart_url,
     video_url,
     translation_status,
     translation_error,
@@ -161,6 +163,7 @@ const publicCategorySelect = `
     gallery_urls,
     brochure_url,
     technical_sheet_url,
+    color_chart_url,
     video_url,
     translation_status,
     updated_at,
@@ -247,6 +250,7 @@ function mapProduct(row: ProductRow, category: CatalogueCategory): CatalogueProd
     galleryUrls: row.gallery_urls ?? [],
     brochureUrl: row.brochure_url ?? "",
     technicalSheetUrl: row.technical_sheet_url ?? "",
+    colorChartUrl: row.color_chart_url ?? "",
     videoUrl: row.video_url ?? "",
     translationStatus: row.translation_status ?? "ready",
     translationError: row.translation_error ?? "",

@@ -211,10 +211,38 @@ function protectedCodes(value: string) {
   return value.match(/\b(?=[a-z0-9._/-]*[a-z])(?=[a-z0-9._/-]*\d)[a-z0-9][a-z0-9._/-]*\b/gi) ?? [];
 }
 
+function sameProtectedValues(sourceValues: string[], translatedValues: string[]) {
+  // Finnish sentence structure can legitimately move a measurement or model
+  // code within the same field. Preserve the exact values and occurrence
+  // counts without incorrectly requiring their textual order to stay English.
+  return JSON.stringify([...sourceValues].sort()) === JSON.stringify([...translatedValues].sort());
+}
+
+function containsProtectedValues(sourceValues: string[], translatedValues: string[]) {
+  const remaining = [...translatedValues];
+  for (const sourceValue of sourceValues) {
+    const matchIndex = remaining.indexOf(sourceValue);
+    if (matchIndex === -1) return false;
+    remaining.splice(matchIndex, 1);
+  }
+  return true;
+}
+
 type ProtectedReplacement = {
   placeholder: string;
   value: string;
 };
+
+function alphabeticPlaceholderId(index: number) {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    value -= 1;
+    result = String.fromCharCode(65 + (value % 26)) + result;
+    value = Math.floor(value / 26);
+  }
+  return result;
+}
 
 function maskProtectedText(
   value: string,
@@ -233,7 +261,9 @@ function maskProtectedText(
   let masked = value;
   for (const term of terms) {
     if (!masked.includes(term)) continue;
-    const placeholder = `__WOITTOLA_PROTECTED_${replacements.length}__`;
+    // Placeholder identifiers must not contain digits. A later protected value
+    // such as the standalone "1" must never match and corrupt an earlier token.
+    const placeholder = `__WOITTOLA_PROTECTED_${alphabeticPlaceholderId(replacements.length)}__`;
     replacements.push({ placeholder, value: term });
     masked = masked.split(term).join(placeholder);
   }
@@ -285,10 +315,13 @@ function assertProtectedTextPreserved(source: string, translated: string, field:
   if (source.trim() !== "" && translated.trim() === "") {
     throw new Error(`Gemini returned an empty ${field}.`);
   }
-  if (JSON.stringify(protectedMeasurements(source)) !== JSON.stringify(protectedMeasurements(translated))) {
+  if (!sameProtectedValues(protectedMeasurements(source), protectedMeasurements(translated))) {
     throw new Error(`Gemini changed a protected measurement or unit in ${field}.`);
   }
-  if (JSON.stringify(protectedCodes(source)) !== JSON.stringify(protectedCodes(translated))) {
+  // Finnish commonly forms natural compounds such as "4-moottoreilla", which
+  // resemble model codes to the broad detector. Every genuine source code must
+  // still be present exactly, but new Finnish compounds are not a failure.
+  if (!containsProtectedValues(protectedCodes(source), protectedCodes(translated))) {
     throw new Error(`Gemini changed a protected model or SKU in ${field}.`);
   }
   for (const term of protectedTerms.filter(Boolean)) {
@@ -687,6 +720,25 @@ Deno.serve(async (request) => {
       const { data: savedId, error: saveError } = await userClient.rpc(rpcName, { p_payload: body.data });
       if (saveError || !savedId) throw new Error(saveError?.message || "English content could not be saved.");
       entityId = savedId;
+      if (body.entityType === "product") {
+        const productData = body.data as Record<string, unknown>;
+        const colorChartUrl = productData.colorChartUrl;
+        if (colorChartUrl !== undefined && typeof colorChartUrl !== "string") {
+          throw new Error("The color chart URL is invalid.");
+        }
+        const { error: documentError } = await admin
+          .from("products")
+          .update({ color_chart_url: colorChartUrl?.trim() || null })
+          .eq("id", entityId);
+        if (documentError) throw documentError;
+        const { data: savedProduct, error: slugError } = await admin
+          .from("products")
+          .select("slug")
+          .eq("id", entityId)
+          .single();
+        if (slugError || !savedProduct?.slug) throw new Error(slugError?.message || "The product URL could not be created.");
+        savedSlug = savedProduct.slug;
+      }
       if (body.entityType === "referenceProject") {
         const { data: savedProject, error: slugError } = await userClient
           .from("reference_projects")

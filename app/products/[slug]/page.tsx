@@ -12,6 +12,7 @@ import { getLocaleMessages } from "../../locales/server";
 import { getMessages } from "../../locales";
 import JsonLd from "../../components/JsonLd";
 import { absoluteUrl, breadcrumbJsonLd, publicPageMetadata, WEBSITE_ID } from "@/lib/seo";
+import { getYouTubeEmbedUrl } from "@/lib/catalogue/youtube";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -42,6 +43,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const images = [product.primaryImageUrl, ...product.galleryUrls].filter((value, index, values) => value && values.indexOf(value) === index);
   const productUrl = absoluteUrl(`/products/${product.slug}`);
   const productId = `${productUrl}#product`;
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(product.videoUrl);
 
   return (
     <main className="home-page product-detail-page">
@@ -122,10 +124,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
         {product.videoUrl ? <section className="product-video-showcase" aria-labelledby="product-video-title">
           <div className="product-video-copy"><span className="product-video-eyebrow"><ClipboardCheck aria-hidden="true" /> {messages.product.demonstration}</span><h2 id="product-video-title">{messages.product.seeInActionPrefix} {product.translation.name} {messages.product.seeInActionSuffix}</h2><p>{messages.product.demonstrationCopy}</p></div>
-          <div className="product-video-card"><div className="product-video-frame"><video controls preload="metadata"><source src={product.videoUrl} /></video></div></div>
+          <div className="product-video-card"><div className="product-video-frame">{youtubeEmbedUrl ? <iframe src={youtubeEmbedUrl} title={`${product.translation.name} ${messages.product.demonstration}`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video controls preload="metadata"><source src={product.videoUrl} /></video>}</div></div>
         </section> : null}
 
-        <ProductInformation productName={product.translation.name} content={product.translation} brochureUrl={product.brochureUrl} technicalSheetUrl={product.technicalSheetUrl} ui={messages.product} />
+        <ProductInformation productName={product.translation.name} content={product.translation} brochureUrl={product.brochureUrl} technicalSheetUrl={product.technicalSheetUrl} colorChartUrl={product.colorChartUrl} ui={messages.product} />
       </div>
       <SiteFooter />
     </main>
