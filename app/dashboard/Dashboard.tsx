@@ -35,6 +35,7 @@ import { createClient } from "@/lib/supabase/client";
 import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
 import type { CatalogueCategory, CatalogueProduct, ColorOption, Specification } from "@/lib/catalogue/types";
 import { getYouTubeVideoId } from "@/lib/catalogue/youtube";
+import { ensureCatalogueAdminSession } from "@/lib/catalogue/admin-session";
 import type { ReferenceProject } from "@/lib/references/types";
 import type { Partner } from "@/lib/partners/types";
 import DashboardLogoutButton from "./DashboardLogoutButton";
@@ -723,6 +724,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
 
   const handleSaveProduct = async (draft: ProductDraft, status: ProductStatus) => {
     try {
+      await ensureCatalogueAdminSession();
       const slug = await availableProductSlug(draft.slug || slugify(draft.name), draft.id);
       const category = categories.find((item) => item.id === draft.categoryId);
       if (!category) throw new Error("Choose a valid category.");
@@ -836,6 +838,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
 
   const handleSaveCategory = async (draft: CategoryDraft) => {
     try {
+      await ensureCatalogueAdminSession();
       const heroUrls = await uploadAssets(draft.heroImage, `categories/${draft.slug}`);
       const homepageUrls = await uploadAssets(draft.homepageImage, `categories/${draft.slug}/homepage`);
       const existing = categories.find((category) => category.id === draft.id);

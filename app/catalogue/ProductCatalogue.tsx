@@ -4,35 +4,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  Activity,
   ArrowRight,
   ChevronDown,
   ClipboardCheck,
-  Droplets,
   HandHeart,
   Headphones,
-  HeartPulse,
   ImageOff,
   PackageOpen,
   SlidersHorizontal,
-  Stethoscope,
-  Syringe,
   Truck,
 } from "lucide-react";
 import type { PublicProduct } from "@/lib/catalogue/types";
 import type { DeepTranslated, Locale, Messages } from "../locales";
 import { interpolate } from "../locales";
-
-const applicationIcons = {
-  dialysis: Droplets,
-  infusion: Syringe,
-  "infusion therapy": Syringe,
-  chemotherapy: Activity,
-  chemo: Activity,
-  "blood collection": HeartPulse,
-  procedure: HandHeart,
-  outpatient: ClipboardCheck,
-} as const;
 
 type FilterGroupProps = {
   title: string;
@@ -170,13 +154,6 @@ export default function ProductCatalogue({ categoryName, products, locale, ui }:
                     <div className="catalogue-product-content">
                       <h3>{product.translation.name}</h3>
                       {product.translation.productTypeLabel || product.productType ? <p>{product.translation.productTypeLabel || product.productType}</p> : null}
-                      {product.applications.length ? <div className="catalogue-applications" aria-label={ui.applications}>
-                        {product.applications.map((application, index) => {
-                          const Icon = applicationIcons[application.toLowerCase() as keyof typeof applicationIcons] ?? Stethoscope;
-                          const label = product.translation.applicationLabels[index] || application;
-                          return <span key={application}><span className="catalogue-application-icon"><Icon aria-hidden="true" /></span>{label}</span>;
-                        })}
-                      </div> : null}
                       <Link href={`/products/${product.slug}`}>{ui.viewProduct} <ArrowRight aria-hidden="true" /></Link>
                     </div>
                   </article>

@@ -100,11 +100,6 @@ export default function AllProductsCatalogue({ categories, ui }: AllProductsCata
                     <div className="catalogue-product-content overview-product-content">
                       <h3>{product.translation.name}</h3>
                       {product.translation.productTypeLabel || product.productType ? <p>{product.translation.productTypeLabel || product.productType}</p> : null}
-                      {product.applications.length ? <div className="overview-product-tags" aria-label={ui.applications}>
-                        {product.applications.map((application, index) => (
-                          <span key={application}>{product.translation.applicationLabels[index] || application}</span>
-                        ))}
-                      </div> : null}
                       <Link href={`/products/${product.slug}`}>
                         {ui.viewProduct} <ArrowRight aria-hidden="true" />
                       </Link>

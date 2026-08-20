@@ -1391,7 +1391,7 @@ summary {
 }
 
 .catalogue-product-content {
-  min-height: 192px;
+  min-height: 150px;
   padding: 17px 17px 18px;
   display: flex;
   flex-direction: column;

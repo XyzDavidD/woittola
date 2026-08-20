@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AlertTriangle, ArrowLeft, Check, CircleCheck, ExternalLink, Eye, EyeOff, Factory, ImagePlus, Languages, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
+import { ensureCatalogueAdminSession } from "@/lib/catalogue/admin-session";
 import type { Partner } from "@/lib/partners/types";
 
 type UploadAsset = { name: string; url?: string; file?: File };
@@ -51,6 +52,7 @@ function PartnerEditor({ partner, onCancel, onSaved }: { partner?: Partner; onCa
     setSaving(true);
     setError("");
     try {
+      await ensureCatalogueAdminSession();
       const uploadId = draft.id || crypto.randomUUID();
       const imageUrl = await uploadImage(draft.image, uploadId);
       const data = await invokeCatalogueTranslation({

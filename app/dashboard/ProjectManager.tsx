@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AlertTriangle, ArrowLeft, Check, CircleCheck, ExternalLink, FileImage, GripVertical, ImagePlus, Languages, LayoutTemplate, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
+import { ensureCatalogueAdminSession } from "@/lib/catalogue/admin-session";
 import type { ProjectBlockType, ProjectContentBlock, ReferenceProject } from "@/lib/references/types";
 
 type UploadAsset = { name: string; url?: string; file?: File };
@@ -84,6 +85,7 @@ function ProjectEditor({ project, onCancel, onSaved }: { project?: ReferenceProj
     if (!canSave || saving) return;
     setSaving(true); setError("");
     try {
+      await ensureCatalogueAdminSession();
       const uploadSlug = draft.slug || slugify(draft.title) || "reference-project";
       const coverUrls = await uploadAssets(draft.cover, `references/${uploadSlug}/cover`);
       const contentBlocks: ProjectContentBlock[] = [];
