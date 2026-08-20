@@ -36,6 +36,14 @@ import { invokeCatalogueTranslation } from "@/lib/catalogue/translation-client";
 import type { CatalogueCategory, CatalogueProduct, ColorOption, Specification } from "@/lib/catalogue/types";
 import { getYouTubeVideoId } from "@/lib/catalogue/youtube";
 import { ensureCatalogueAdminSession } from "@/lib/catalogue/admin-session";
+import {
+  MAX_DOCUMENT_BYTES,
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  formatFileSize,
+  uploadCatalogueFile,
+  validateFileSize,
+} from "@/lib/catalogue/storage-upload";
 import type { ReferenceProject } from "@/lib/references/types";
 import type { Partner } from "@/lib/partners/types";
 import DashboardLogoutButton from "./DashboardLogoutButton";
@@ -226,9 +234,11 @@ type UploadFieldProps = {
   multiple?: boolean;
   files: UploadAsset[];
   onFiles: (files: UploadAsset[]) => void;
+  maxBytes: number;
 };
 
-function UploadField({ icon: Icon, title, description, accept, multiple, files, onFiles }: UploadFieldProps) {
+function UploadField({ icon: Icon, title, description, accept, multiple, files, onFiles, maxBytes }: UploadFieldProps) {
+  const [error, setError] = useState("");
   return (
     <div className="admin-upload-block">
       <label className="admin-upload-zone">
@@ -237,8 +247,17 @@ function UploadField({ icon: Icon, title, description, accept, multiple, files, 
           accept={accept}
           multiple={multiple}
           onChange={(event) => {
-            const selected = Array.from(event.target.files ?? []).map((file) => ({ name: file.name, file }));
+            const selectedFiles = Array.from(event.target.files ?? []);
+            const oversized = selectedFiles.find((file) => file.size > maxBytes);
+            if (oversized) {
+              setError(`${oversized.name} is ${formatFileSize(oversized.size)}. Maximum ${formatFileSize(maxBytes)}.`);
+              event.target.value = "";
+              return;
+            }
+            setError("");
+            const selected = selectedFiles.map((file) => ({ name: file.name, file }));
             onFiles(multiple ? [...files, ...selected] : selected.slice(0, 1));
+            event.target.value = "";
           }}
         />
         <span className="admin-upload-icon"><Icon aria-hidden="true" /></span>
@@ -248,6 +267,7 @@ function UploadField({ icon: Icon, title, description, accept, multiple, files, 
         </span>
         <span className="admin-upload-button">Choose file{multiple ? "s" : ""}</span>
       </label>
+      {error ? <p className="admin-upload-error"><AlertTriangle aria-hidden="true" />{error}</p> : null}
       {files.length ? (
         <div className="admin-upload-files">
           {files.map((file) => (
@@ -386,21 +406,21 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
 
               <div className="admin-field-section">
                 <div className="admin-section-label"><h3>Product gallery *</h3><p>At least one image is required. Upload up to 8; the first becomes the main image.</p></div>
-                <UploadField icon={ImagePlus} title="Upload product images" description="JPG, PNG or WebP · Recommended 1600 × 1200 px" accept="image/*" multiple files={draft.images} onFiles={(files) => updateDraft("images", files.slice(0, 8))} />
+                <UploadField icon={ImagePlus} title="Upload product images" description="JPG, PNG or WebP · Recommended 1600 × 1200 px · Maximum 20 MB each" accept="image/*" multiple files={draft.images} maxBytes={MAX_IMAGE_BYTES} onFiles={(files) => updateDraft("images", files.slice(0, 8))} />
               </div>
 
               <div className="admin-two-column-fields">
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Product brochure</h3><p>Displayed beside the quote button and in Downloads.</p></div>
-                  <UploadField icon={FileText} title="Upload brochure" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.brochure} onFiles={(files) => updateDraft("brochure", files.slice(0, 1))} />
+                  <UploadField icon={FileText} title="Upload brochure" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.brochure} maxBytes={MAX_DOCUMENT_BYTES} onFiles={(files) => updateDraft("brochure", files.slice(0, 1))} />
                 </div>
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Technical data sheet</h3><p>Optional second document in the Downloads tab.</p></div>
-                  <UploadField icon={FileText} title="Upload data sheet" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.technicalSheet} onFiles={(files) => updateDraft("technicalSheet", files.slice(0, 1))} />
+                  <UploadField icon={FileText} title="Upload data sheet" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.technicalSheet} maxBytes={MAX_DOCUMENT_BYTES} onFiles={(files) => updateDraft("technicalSheet", files.slice(0, 1))} />
                 </div>
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Color chart</h3><p>Optional PDF showing the available upholstery or finish colors.</p></div>
-                  <UploadField icon={FileText} title="Upload color chart" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.colorChart} onFiles={(files) => updateDraft("colorChart", files.slice(0, 1))} />
+                  <UploadField icon={FileText} title="Upload color chart" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.colorChart} maxBytes={MAX_DOCUMENT_BYTES} onFiles={(files) => updateDraft("colorChart", files.slice(0, 1))} />
                 </div>
               </div>
 
@@ -413,7 +433,7 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
                     <small>Supports YouTube watch, short, live and youtu.be links.</small>
                   </label>
                 </div>
-                <UploadField icon={Video} title="Upload product video" description="MP4 or WebM · Maximum 250 MB" accept="video/mp4,video/webm" files={draft.video} onFiles={(files) => updateDraft("video", files.slice(0, 1))} />
+                <UploadField icon={Video} title="Upload product video" description="MP4 or WebM · Maximum 50 MB on Supabase Free · Use YouTube for larger videos" accept="video/mp4,video/webm" files={draft.video} maxBytes={MAX_VIDEO_BYTES} onFiles={(files) => updateDraft("video", files.slice(0, 1))} />
               </div>
             </section>
           ) : null}
@@ -552,7 +572,7 @@ function CategoryEditor({ category, onCancel, onSave }: CategoryEditorProps) {
                 <Trash2 aria-hidden="true" /> Remove hero image
               </button>
             ) : null}
-            <UploadField icon={ImagePlus} title={draft.heroImage.length ? "Change hero image" : "Add hero image"} description="JPG, PNG, WebP or AVIF · A wide landscape image works best" accept="image/*" files={draft.heroImage} onFiles={(files) => update("heroImage", files.slice(0, 1))} />
+            <UploadField icon={ImagePlus} title={draft.heroImage.length ? "Change hero image" : "Add hero image"} description="JPG, PNG, WebP or AVIF · A wide landscape image works best · Maximum 20 MB" accept="image/*" files={draft.heroImage} maxBytes={MAX_IMAGE_BYTES} onFiles={(files) => update("heroImage", files.slice(0, 1))} />
           </div>
 
           <div className="admin-category-language-section">
@@ -563,7 +583,7 @@ function CategoryEditor({ category, onCancel, onSave }: CategoryEditorProps) {
                 <span>Current homepage image</span>
               </div>
             ) : null}
-            <UploadField icon={ImagePlus} title="Change homepage image" description="JPG, PNG, WebP or AVIF · The complete image remains visible inside the card" accept="image/*" files={draft.homepageImage} onFiles={(files) => update("homepageImage", files.slice(0, 1))} />
+            <UploadField icon={ImagePlus} title="Change homepage image" description="JPG, PNG, WebP or AVIF · The complete image remains visible inside the card · Maximum 20 MB" accept="image/*" files={draft.homepageImage} maxBytes={MAX_IMAGE_BYTES} onFiles={(files) => update("homepageImage", files.slice(0, 1))} />
             <label className="admin-category-publish-toggle"><input type="checkbox" checked={draft.isPublished} onChange={(event) => update("isPublished", event.target.checked)} /><span>Category is visible on the website</span></label>
           </div>
         </div>
@@ -614,7 +634,6 @@ function safeFileName(value: string) {
 }
 
 async function uploadAssets(assets: UploadAsset[], folder: string) {
-  const supabase = createClient();
   const urls: string[] = [];
 
   for (const asset of assets) {
@@ -625,14 +644,7 @@ async function uploadAssets(assets: UploadAsset[], folder: string) {
     if (!asset.file) continue;
 
     const path = `${folder}/${crypto.randomUUID()}-${safeFileName(asset.file.name)}`;
-    const { error } = await supabase.storage.from("catalogue-media").upload(path, asset.file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
-    if (error) throw error;
-
-    const { data } = supabase.storage.from("catalogue-media").getPublicUrl(path);
-    urls.push(data.publicUrl);
+    urls.push(await uploadCatalogueFile(asset.file, path));
   }
 
   return urls;
@@ -732,6 +744,9 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         throw new Error("Add the product title and description.");
       }
       if (!draft.images.length) throw new Error("Add at least one product image.");
+      draft.images.forEach((asset) => { if (asset.file) validateFileSize(asset.file, MAX_IMAGE_BYTES); });
+      [...draft.brochure, ...draft.technicalSheet, ...draft.colorChart].forEach((asset) => { if (asset.file) validateFileSize(asset.file, MAX_DOCUMENT_BYTES); });
+      draft.video.forEach((asset) => { if (asset.file) validateFileSize(asset.file, MAX_VIDEO_BYTES); });
       const youtubeUrl = draft.youtubeUrl.trim();
       if (youtubeUrl && !getYouTubeVideoId(youtubeUrl)) {
         throw new Error("Add a valid YouTube watch, short, live or youtu.be link.");
