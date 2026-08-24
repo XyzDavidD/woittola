@@ -624,7 +624,12 @@ function toDashboardProduct(product: CatalogueProduct): DashboardProduct {
 }
 
 function cleanList(items: string[]) {
-  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+  const unique = new Map<string, string>();
+  items.map((item) => item.trim()).filter(Boolean).forEach((item) => {
+    const key = item.toLocaleLowerCase();
+    if (!unique.has(key)) unique.set(key, item);
+  });
+  return [...unique.values()];
 }
 
 function safeFileName(value: string) {

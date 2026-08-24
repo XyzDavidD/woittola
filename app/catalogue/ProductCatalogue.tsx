@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   ChevronDown,
@@ -13,6 +13,7 @@ import {
   PackageOpen,
   SlidersHorizontal,
   Truck,
+  X,
 } from "lucide-react";
 import type { PublicProduct } from "@/lib/catalogue/types";
 import type { DeepTranslated, Locale, Messages } from "../locales";
@@ -50,11 +51,14 @@ function FilterGroup({ title, allLabel, total, options, selected, onChange, onAl
   );
 }
 
+const normalizeFilterValue = (value: string) => value.trim().toLocaleLowerCase();
+
 function countValues(values: Array<{ value: string; label: string }>, locale: Locale) {
   const counts = new Map<string, { label: string; count: number }>();
-  values.filter(({ value }) => Boolean(value)).forEach(({ value, label }) => {
-    const current = counts.get(value);
-    counts.set(value, { label: label || value, count: (current?.count ?? 0) + 1 });
+  values.filter(({ value }) => Boolean(value.trim())).forEach(({ value, label }) => {
+    const normalizedValue = normalizeFilterValue(value);
+    const current = counts.get(normalizedValue);
+    counts.set(normalizedValue, { label: current?.label || label.trim() || value.trim(), count: (current?.count ?? 0) + 1 });
   });
   return [...counts.entries()]
     .map(([value, item]) => ({ value, ...item }))
@@ -73,24 +77,43 @@ export default function ProductCatalogue({ categoryName, products, locale, ui }:
   const [productTypes, setProductTypes] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [sort, setSort] = useState("recommended");
-  const [visibleCount, setVisibleCount] = useState(6);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFiltersOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [filtersOpen]);
 
   const filterOptions = useMemo(() => ({
-    applications: countValues(products.flatMap((product) => product.applications.map((value, index) => ({ value, label: product.translation.applicationLabels[index] || value }))), locale),
-    productTypes: countValues(products.map((product) => ({ value: product.productType, label: product.translation.productTypeLabel || product.productType })), locale),
+    applications: countValues(products.flatMap((product) => product.applications.map((value, index) => {
+      const label = product.translation.applicationLabels[index] || value;
+      return { value: label, label };
+    })), locale),
+    productTypes: countValues(products.map((product) => {
+      const label = product.translation.productTypeLabel || product.productType;
+      return { value: label, label };
+    }), locale),
     brands: countValues(products.map((product) => ({ value: product.brand, label: product.brand })), locale),
   }), [locale, products]);
 
   const toggleFilter = (value: string, selected: string[], update: (values: string[]) => void) => {
     update(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
-    setVisibleCount(6);
   };
 
   const filteredProducts = useMemo(() => {
     const filtered = products.filter((product) => {
-      const matchesApplication = applications.length === 0 || applications.some((value) => product.applications.includes(value));
-      const matchesType = productTypes.length === 0 || productTypes.includes(product.productType);
-      const matchesBrand = brands.length === 0 || brands.includes(product.brand);
+      const matchesApplication = applications.length === 0 || product.applications.some((value, index) => applications.includes(normalizeFilterValue(product.translation.applicationLabels[index] || value)));
+      const matchesType = productTypes.length === 0 || productTypes.includes(normalizeFilterValue(product.translation.productTypeLabel || product.productType));
+      const matchesBrand = brands.length === 0 || brands.includes(normalizeFilterValue(product.brand));
       return matchesApplication && matchesType && matchesBrand;
     });
 
@@ -105,17 +128,25 @@ export default function ProductCatalogue({ categoryName, products, locale, ui }:
     setApplications([]);
     setProductTypes([]);
     setBrands([]);
-    setVisibleCount(6);
   };
 
   return (
     <section className="catalogue-products-section" aria-label={`${categoryName} ${ui.category.toLowerCase()}`}>
       {products.length ? (
         <div className="catalogue-layout">
-          <aside className="catalogue-filter-card" aria-label={ui.filterProductsAria}>
+          <button className="catalogue-mobile-filter-trigger" type="button" aria-expanded={filtersOpen} aria-controls="catalogue-filters" onClick={() => setFiltersOpen(true)}>
+            <SlidersHorizontal aria-hidden="true" />
+            <span>{ui.viewFilters}</span>
+            {(applications.length + productTypes.length + brands.length) > 0 ? <strong>{applications.length + productTypes.length + brands.length}</strong> : null}
+          </button>
+          <button className={`catalogue-filter-backdrop ${filtersOpen ? "is-open" : ""}`} type="button" aria-label={ui.closeFilters} onClick={() => setFiltersOpen(false)} />
+          <aside id="catalogue-filters" className={`catalogue-filter-card ${filtersOpen ? "is-open" : ""}`} aria-label={ui.filterProductsAria}>
             <div className="catalogue-filter-heading">
               <h2>{ui.filterProducts}</h2>
-              <button type="button" onClick={resetFilters}>{ui.clearAll}</button>
+              <div className="catalogue-filter-heading-actions">
+                <button type="button" onClick={resetFilters}>{ui.clearAll}</button>
+                <button className="catalogue-filter-close" type="button" aria-label={ui.closeFilters} onClick={() => setFiltersOpen(false)}><X aria-hidden="true" /></button>
+              </div>
             </div>
 
             <FilterGroup title={ui.application} allLabel={ui.allApplications} total={products.length} options={filterOptions.applications} selected={applications} onAll={() => setApplications([])} onChange={(value) => toggleFilter(value, applications, setApplications)} />
@@ -123,6 +154,7 @@ export default function ProductCatalogue({ categoryName, products, locale, ui }:
             <FilterGroup title={ui.brand} allLabel={ui.allBrands} total={products.length} options={filterOptions.brands} selected={brands} onAll={() => setBrands([])} onChange={(value) => toggleFilter(value, brands, setBrands)} />
 
             <button className="catalogue-reset-button" type="button" onClick={resetFilters}>{ui.resetFilters}</button>
+            <button className="catalogue-apply-filters" type="button" onClick={() => setFiltersOpen(false)}>{interpolate(ui.showProducts, { count: filteredProducts.length })}</button>
           </aside>
 
           <div className="catalogue-results">
@@ -141,7 +173,7 @@ export default function ProductCatalogue({ categoryName, products, locale, ui }:
 
             {filteredProducts.length ? (
               <div className="catalogue-product-grid">
-                {filteredProducts.slice(0, visibleCount).map((product) => (
+                {filteredProducts.map((product) => (
                   <article className="catalogue-product-card" key={product.id}>
                     <div className="catalogue-product-media">
                       {product.featured ? <span className="catalogue-bestseller">{ui.featured}</span> : null}
@@ -168,11 +200,6 @@ export default function ProductCatalogue({ categoryName, products, locale, ui }:
               </div>
             )}
 
-            {visibleCount < filteredProducts.length ? (
-              <button className="catalogue-load-more" type="button" onClick={() => setVisibleCount((count) => count + 6)}>
-                {ui.loadMore} <ChevronDown aria-hidden="true" />
-              </button>
-            ) : null}
           </div>
         </div>
       ) : (

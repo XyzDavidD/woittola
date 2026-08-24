@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { PublicCategory } from "@/lib/catalogue/types";
 import type { DeepTranslated, Messages } from "../locales";
 
@@ -14,6 +14,21 @@ type AllProductsCatalogueProps = {
 
 export default function AllProductsCatalogue({ categories, ui }: AllProductsCatalogueProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFiltersOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [filtersOpen]);
 
   const visibleCategories = selectedCategories.length
     ? categories.filter((category) => selectedCategories.includes(category.slug))
@@ -30,12 +45,18 @@ export default function AllProductsCatalogue({ categories, ui }: AllProductsCata
   return (
     <section className="catalogue-products-section all-products-section" aria-label={ui.allCategoriesAria}>
       <div className="catalogue-layout all-products-layout">
-        <aside className="catalogue-filter-card all-products-filter" aria-label={ui.filterAria}>
+        <button className="catalogue-mobile-filter-trigger" type="button" aria-expanded={filtersOpen} aria-controls="all-products-filters" onClick={() => setFiltersOpen(true)}>
+          <SlidersHorizontal aria-hidden="true" /><span>{ui.viewFilters}</span>
+          {selectedCategories.length ? <strong>{selectedCategories.length}</strong> : null}
+        </button>
+        <button className={`catalogue-filter-backdrop ${filtersOpen ? "is-open" : ""}`} type="button" aria-label={ui.closeFilters} onClick={() => setFiltersOpen(false)} />
+        <aside id="all-products-filters" className={`catalogue-filter-card all-products-filter ${filtersOpen ? "is-open" : ""}`} aria-label={ui.filterAria}>
           <div className="catalogue-filter-heading">
             <h2>{ui.filterProducts}</h2>
-            <button type="button" onClick={() => setSelectedCategories([])}>
-              {ui.clearAll}
-            </button>
+            <div className="catalogue-filter-heading-actions">
+              <button type="button" onClick={() => setSelectedCategories([])}>{ui.clearAll}</button>
+              <button className="catalogue-filter-close" type="button" aria-label={ui.closeFilters} onClick={() => setFiltersOpen(false)}><X aria-hidden="true" /></button>
+            </div>
           </div>
 
           <fieldset className="catalogue-filter-group">
@@ -71,6 +92,7 @@ export default function AllProductsCatalogue({ categories, ui }: AllProductsCata
           >
             {ui.resetFilter}
           </button>
+          <button className="catalogue-apply-filters" type="button" onClick={() => setFiltersOpen(false)}>{ui.showCategories}</button>
         </aside>
 
         <div className="all-products-results">
