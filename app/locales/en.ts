@@ -300,6 +300,8 @@ export const en = {
     brochure: "Product brochure",
     technicalSheet: "Technical data sheet",
     colorChart: "Color chart",
+    cleaningGuide: "Cleaning guide",
+    complianceCertifications: "Compliance & Certifications",
     pdf: "PDF document",
     helpTitle: "Need help finding the right solution?",
     helpCopy: "Our team is ready to help you choose the best product for your needs.",

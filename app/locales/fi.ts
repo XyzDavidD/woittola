@@ -302,6 +302,8 @@ export const fi = {
     brochure: "Tuote-esite",
     technicalSheet: "Tekninen tietolehti",
     colorChart: "Värikartta",
+    cleaningGuide: "Puhdistusohje",
+    complianceCertifications: "Vaatimustenmukaisuus ja sertifikaatit",
     pdf: "PDF-asiakirja",
     helpTitle: "Tarvitsetko apua oikean ratkaisun löytämisessä?",
     helpCopy: "Tiimimme auttaa valitsemaan tarpeisiisi parhaiten sopivan tuotteen.",

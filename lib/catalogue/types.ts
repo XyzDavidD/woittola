@@ -69,6 +69,8 @@ export type CatalogueProduct = {
   brochureUrl: string;
   technicalSheetUrl: string;
   colorChartUrl: string;
+  cleaningGuideUrl: string;
+  complianceCertificationsUrl: string;
   videoUrl: string;
   translationStatus: TranslationStatus;
   translationError: string;

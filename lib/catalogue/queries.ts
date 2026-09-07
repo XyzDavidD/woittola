@@ -64,6 +64,8 @@ type ProductRow = {
   brochure_url: string | null;
   technical_sheet_url: string | null;
   color_chart_url: string | null;
+  cleaning_guide_url: string | null;
+  compliance_certifications_url: string | null;
   video_url: string | null;
   translation_status: TranslationStatus;
   translation_error?: string | null;
@@ -109,6 +111,8 @@ const adminCategorySelect = `
     brochure_url,
     technical_sheet_url,
     color_chart_url,
+    cleaning_guide_url,
+    compliance_certifications_url,
     video_url,
     translation_status,
     translation_error,
@@ -164,6 +168,8 @@ const publicCategorySelect = `
     brochure_url,
     technical_sheet_url,
     color_chart_url,
+    cleaning_guide_url,
+    compliance_certifications_url,
     video_url,
     translation_status,
     updated_at,
@@ -251,6 +257,8 @@ function mapProduct(row: ProductRow, category: CatalogueCategory): CatalogueProd
     brochureUrl: row.brochure_url ?? "",
     technicalSheetUrl: row.technical_sheet_url ?? "",
     colorChartUrl: row.color_chart_url ?? "",
+    cleaningGuideUrl: row.cleaning_guide_url ?? "",
+    complianceCertificationsUrl: row.compliance_certifications_url ?? "",
     videoUrl: row.video_url ?? "",
     translationStatus: row.translation_status ?? "ready",
     translationError: row.translation_error ?? "",

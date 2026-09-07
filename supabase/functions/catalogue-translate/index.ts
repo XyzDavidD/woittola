@@ -208,22 +208,25 @@ function protectedMeasurements(value: string) {
 }
 
 function protectedCodes(value: string) {
-  return value.match(/\b(?=[a-z0-9._/-]*[a-z])(?=[a-z0-9._/-]*\d)[a-z0-9][a-z0-9._/-]*\b/gi) ?? [];
+  const candidates = value.match(/\b[A-Za-z0-9][A-Za-z0-9._/-]*\b/g) ?? [];
+  return candidates.filter((candidate) => {
+    if (!/[A-Za-z]/.test(candidate) || !/\d/.test(candidate)) return false;
+    // Genuine catalogue codes normally begin with a letter (X2, E2,
+    // STRX2-H2). Number-led descriptive compounds such as "5-star" and
+    // "4-section" are natural language and must remain translatable.
+    if (/^[A-Za-z]/.test(candidate)) return true;
+    // Preserve compact established forms such as 3D and 5G, but not words
+    // following a number and a hyphen.
+    return /^\d+[A-Z]+(?:[./-][A-Z0-9]+)*$/.test(candidate);
+  });
 }
 
-function sameProtectedValues(sourceValues: string[], translatedValues: string[]) {
-  // Finnish sentence structure can legitimately move a measurement or model
-  // code within the same field. Preserve the exact values and occurrence
-  // counts without incorrectly requiring their textual order to stay English.
-  return JSON.stringify([...sourceValues].sort()) === JSON.stringify([...translatedValues].sort());
-}
-
-function containsProtectedValues(sourceValues: string[], translatedValues: string[]) {
-  const remaining = [...translatedValues];
-  for (const sourceValue of sourceValues) {
-    const matchIndex = remaining.indexOf(sourceValue);
-    if (matchIndex === -1) return false;
-    remaining.splice(matchIndex, 1);
+function containsProtectedLiterals(sourceValues: string[], translated: string) {
+  const requiredCounts = new Map<string, number>();
+  sourceValues.forEach((value) => requiredCounts.set(value, (requiredCounts.get(value) ?? 0) + 1));
+  for (const [value, requiredCount] of requiredCounts) {
+    const actualCount = translated.split(value).length - 1;
+    if (actualCount < requiredCount) return false;
   }
   return true;
 }
@@ -260,12 +263,16 @@ function maskProtectedText(
 
   let masked = value;
   for (const term of terms) {
-    if (!masked.includes(term)) continue;
-    // Placeholder identifiers must not contain digits. A later protected value
-    // such as the standalone "1" must never match and corrupt an earlier token.
-    const placeholder = `__WOITTOLA_PROTECTED_${alphabeticPlaceholderId(replacements.length)}__`;
-    replacements.push({ placeholder, value: term });
-    masked = masked.split(term).join(placeholder);
+    // Give every occurrence its own token. Reusing a placeholder for repeated
+    // values lets a language model collapse two identical tokens into one,
+    // which previously caused valid translations to fail validation.
+    while (masked.includes(term)) {
+      // Placeholder identifiers must not contain digits. A later protected
+      // value such as the standalone "1" must never corrupt an earlier token.
+      const placeholder = `__WOITTOLA_PROTECTED_${alphabeticPlaceholderId(replacements.length)}__`;
+      replacements.push({ placeholder, value: term });
+      masked = masked.replace(term, placeholder);
+    }
   }
   return masked;
 }
@@ -308,27 +315,41 @@ function restoreProtectedPayload(value: unknown, replacements: ProtectedReplacem
   return value;
 }
 
-function assertProtectedTextPreserved(source: string, translated: string, field: string, protectedTerms: string[] = []) {
+function preserveProtectedTextOrFallback(source: string, translated: string, field: string, protectedTerms: string[] = []) {
+  let fallbackReason = "";
   if (source.trim() === "" && translated.trim() !== "") {
-    throw new Error(`Gemini added content to empty field ${field}.`);
+    fallbackReason = "Gemini added content to an empty field";
   }
   if (source.trim() !== "" && translated.trim() === "") {
-    throw new Error(`Gemini returned an empty ${field}.`);
+    fallbackReason = "Gemini returned an empty field";
   }
-  if (!sameProtectedValues(protectedMeasurements(source), protectedMeasurements(translated))) {
-    throw new Error(`Gemini changed a protected measurement or unit in ${field}.`);
+  // Validate the original literal rather than reparsing the Finnish sentence.
+  // Finnish may legitimately attach a suffix, e.g. "49 cm:n" or "E2-malli";
+  // the protected value is still unchanged inside that natural compound.
+  if (!containsProtectedLiterals(protectedMeasurements(source), translated)) {
+    fallbackReason = "Gemini changed a protected measurement or unit";
   }
   // Finnish commonly forms natural compounds such as "4-moottoreilla", which
   // resemble model codes to the broad detector. Every genuine source code must
   // still be present exactly, but new Finnish compounds are not a failure.
-  if (!containsProtectedValues(protectedCodes(source), protectedCodes(translated))) {
-    throw new Error(`Gemini changed a protected model or SKU in ${field}.`);
+  if (!containsProtectedLiterals(protectedCodes(source), translated)) {
+    fallbackReason = "Gemini changed a protected model or SKU";
   }
   for (const term of protectedTerms.filter(Boolean)) {
     if (source.includes(term) && !translated.includes(term)) {
-      throw new Error(`Gemini changed the protected brand name in ${field}.`);
+      fallbackReason = "Gemini changed a protected brand name";
     }
   }
+
+  if (fallbackReason) {
+    // A single imperfect field must not discard an otherwise useful Finnish
+    // translation. Keep that field's exact English source while saving every
+    // valid translated field. A later retry can improve it without risking
+    // measurements, model codes, brands or existing catalogue content.
+    console.warn(`Using English fallback for ${field}: ${fallbackReason}.`);
+    return source;
+  }
+  return translated;
 }
 
 async function callGemini(apiKey: string, source: unknown, schema: unknown, entityType: EntityType) {
@@ -421,7 +442,7 @@ function validateCategoryTranslation(value: unknown, source: CategorySource): Ca
     metaDescription: requireString(item.metaDescription, "metaDescription"),
   };
   (Object.keys(source) as Array<keyof CategorySource>).forEach((field) => {
-    assertProtectedTextPreserved(source[field], translated[field], field);
+    translated[field] = preserveProtectedTextOrFallback(source[field], translated[field], field);
   });
   return translated;
 }
@@ -435,8 +456,8 @@ function validatePartnerTranslation(value: unknown, source: PartnerSource): Part
     title: requireString(item.title, "title"),
     description: requireString(item.description, "description"),
   };
-  assertProtectedTextPreserved(source.title, translated.title, "title", [source.title]);
-  assertProtectedTextPreserved(source.description, translated.description, "description", [source.title]);
+  translated.title = preserveProtectedTextOrFallback(source.title, translated.title, "title", [source.title]);
+  translated.description = preserveProtectedTextOrFallback(source.description, translated.description, "description", [source.title]);
   return translated;
 }
 
@@ -459,10 +480,18 @@ function validateProductTranslation(value: unknown, source: ProductSource, brand
       throw new Error(`Gemini returned an invalid specification at position ${index + 1}.`);
     }
     const translated = specification as Record<string, unknown>;
-    const label = requireString(translated.label, `specifications[${index}].label`);
-    const translatedValue = requireString(translated.value, `specifications[${index}].value`);
-    assertProtectedTextPreserved(source.specifications[index].label, label, `specifications[${index}].label`, [brand]);
-    assertProtectedTextPreserved(source.specifications[index].value, translatedValue, `specifications[${index}].value`, [brand]);
+    const label = preserveProtectedTextOrFallback(
+      source.specifications[index].label,
+      requireString(translated.label, `specifications[${index}].label`),
+      `specifications[${index}].label`,
+      [brand],
+    );
+    const translatedValue = preserveProtectedTextOrFallback(
+      source.specifications[index].value,
+      requireString(translated.value, `specifications[${index}].value`),
+      `specifications[${index}].value`,
+      [brand],
+    );
     return { label, value: translatedValue };
   });
 
@@ -470,8 +499,12 @@ function validateProductTranslation(value: unknown, source: ProductSource, brand
     if (!color || typeof color !== "object" || Array.isArray(color)) {
       throw new Error(`Gemini returned an invalid color at position ${index + 1}.`);
     }
-    const name = requireString((color as Record<string, unknown>).name, `colors[${index}].name`);
-    assertProtectedTextPreserved(source.colors[index].name, name, `colors[${index}].name`, [brand]);
+    const name = preserveProtectedTextOrFallback(
+      source.colors[index].name,
+      requireString((color as Record<string, unknown>).name, `colors[${index}].name`),
+      `colors[${index}].name`,
+      [brand],
+    );
     return {
       name,
       value: source.colors[index].value,
@@ -496,9 +529,9 @@ function validateProductTranslation(value: unknown, source: ProductSource, brand
     accessories: requireStringArray(item.accessories, "accessories", source.accessories.length),
   };
 
-  assertProtectedTextPreserved(source.name, translated.name, "name", [brand]);
-  assertProtectedTextPreserved(source.description, translated.description, "description", [brand]);
-  assertProtectedTextPreserved(source.productTypeLabel, translated.productTypeLabel, "productTypeLabel", [brand]);
+  translated.name = preserveProtectedTextOrFallback(source.name, translated.name, "name", [brand]);
+  translated.description = preserveProtectedTextOrFallback(source.description, translated.description, "description", [brand]);
+  translated.productTypeLabel = preserveProtectedTextOrFallback(source.productTypeLabel, translated.productTypeLabel, "productTypeLabel", [brand]);
   const listFields = [
     "applicationLabels",
     "typicalApplications",
@@ -508,7 +541,12 @@ function validateProductTranslation(value: unknown, source: ProductSource, brand
   ] as const;
   listFields.forEach((field) => {
     source[field].forEach((sourceItem, index) => {
-      assertProtectedTextPreserved(sourceItem, translated[field][index], `${field}[${index}]`, [brand]);
+      translated[field][index] = preserveProtectedTextOrFallback(
+        sourceItem,
+        translated[field][index],
+        `${field}[${index}]`,
+        [brand],
+      );
     });
   });
 
@@ -545,11 +583,15 @@ function validateProjectTranslation(value: unknown, source: ProjectSource): Proj
     }),
   };
   (["title", "summary", "projectTypeLabel", "location", "unit", "metaTitle", "metaDescription"] as const).forEach((field) => {
-    assertProtectedTextPreserved(source[field], translated[field], field);
+    translated[field] = preserveProtectedTextOrFallback(source[field], translated[field], field);
   });
   source.contentBlocks.forEach((block, index) => {
     (["heading", "body", "imageAlt", "caption"] as const).forEach((field) => {
-      assertProtectedTextPreserved(block[field], translated.contentBlocks[index][field], `contentBlocks[${index}].${field}`);
+      translated.contentBlocks[index][field] = preserveProtectedTextOrFallback(
+        block[field],
+        translated.contentBlocks[index][field],
+        `contentBlocks[${index}].${field}`,
+      );
     });
   });
   return translated;
@@ -723,14 +765,31 @@ Deno.serve(async (request) => {
       if (body.entityType === "product") {
         const productData = body.data as Record<string, unknown>;
         const colorChartUrl = productData.colorChartUrl;
-        if (colorChartUrl !== undefined && typeof colorChartUrl !== "string") {
-          throw new Error("The color chart URL is invalid.");
+        const cleaningGuideUrl = productData.cleaningGuideUrl;
+        const complianceCertificationsUrl = productData.complianceCertificationsUrl;
+        const productDocuments = [
+          ["color chart", colorChartUrl],
+          ["cleaning guide", cleaningGuideUrl],
+          ["compliance and certifications", complianceCertificationsUrl],
+        ] as const;
+        for (const [label, documentUrl] of productDocuments) {
+          if (documentUrl !== undefined && typeof documentUrl !== "string") {
+            throw new Error(`The ${label} URL is invalid.`);
+          }
         }
-        const { error: documentError } = await admin
-          .from("products")
-          .update({ color_chart_url: colorChartUrl?.trim() || null })
-          .eq("id", entityId);
-        if (documentError) throw documentError;
+        const documentUpdate: Record<string, string | null> = {};
+        if (typeof colorChartUrl === "string") documentUpdate.color_chart_url = colorChartUrl.trim() || null;
+        if (typeof cleaningGuideUrl === "string") documentUpdate.cleaning_guide_url = cleaningGuideUrl.trim() || null;
+        if (typeof complianceCertificationsUrl === "string") {
+          documentUpdate.compliance_certifications_url = complianceCertificationsUrl.trim() || null;
+        }
+        if (Object.keys(documentUpdate).length > 0) {
+          const { error: documentError } = await admin
+            .from("products")
+            .update(documentUpdate)
+            .eq("id", entityId);
+          if (documentError) throw documentError;
+        }
         const { data: savedProduct, error: slugError } = await admin
           .from("products")
           .select("slug")

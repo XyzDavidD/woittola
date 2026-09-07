@@ -95,6 +95,8 @@ type ProductDraft = {
   brochure: UploadAsset[];
   technicalSheet: UploadAsset[];
   colorChart: UploadAsset[];
+  cleaningGuide: UploadAsset[];
+  complianceCertifications: UploadAsset[];
   youtubeUrl: string;
   video: UploadAsset[];
 };
@@ -152,6 +154,8 @@ function createDraft(categories: DashboardCategory[], product?: DashboardProduct
     brochure: product?.brochureUrl ? [{ name: product.brochureUrl.split("/").at(-1) ?? "brochure.pdf", url: product.brochureUrl }] : [],
     technicalSheet: product?.technicalSheetUrl ? [{ name: product.technicalSheetUrl.split("/").at(-1) ?? "technical-sheet.pdf", url: product.technicalSheetUrl }] : [],
     colorChart: product?.colorChartUrl ? [{ name: product.colorChartUrl.split("/").at(-1) ?? "color-chart.pdf", url: product.colorChartUrl }] : [],
+    cleaningGuide: product?.cleaningGuideUrl ? [{ name: product.cleaningGuideUrl.split("/").at(-1) ?? "cleaning-guide.pdf", url: product.cleaningGuideUrl }] : [],
+    complianceCertifications: product?.complianceCertificationsUrl ? [{ name: product.complianceCertificationsUrl.split("/").at(-1) ?? "compliance-certifications.pdf", url: product.complianceCertificationsUrl }] : [],
     youtubeUrl: hasYouTubeVideo ? product?.videoUrl ?? "" : "",
     video: product?.videoUrl && !hasYouTubeVideo ? [{ name: product.videoUrl.split("/").at(-1) ?? "product-video", url: product.videoUrl }] : [],
   };
@@ -190,9 +194,118 @@ type ColorEditorProps = {
   onChange: (values: ColorOption[]) => void;
 };
 
+type ColorPreset = {
+  name: string;
+  code: string;
+  value: string;
+};
+
+const colorPresetGroups: Array<{ name: string; colors: ColorPreset[] }> = [
+  {
+    name: "Luxor",
+    colors: [
+      { name: "Black", code: "L100", value: "#252B2E" },
+      { name: "Light Grey", code: "L200", value: "#C9C9C7" },
+      { name: "Anthracite", code: "L210", value: "#555657" },
+      { name: "Grey", code: "L220", value: "#9B9C9E" },
+      { name: "Brown", code: "L300", value: "#A86645" },
+      { name: "Green", code: "L400", value: "#A6C95F" },
+      { name: "Cyan", code: "L410", value: "#3AA99A" },
+      { name: "Aquamarine", code: "L420", value: "#73BEB5" },
+      { name: "Mint", code: "L430", value: "#91D0C9" },
+      { name: "Dune", code: "L500", value: "#F2B75C" },
+      { name: "Red", code: "L600", value: "#AD3C42" },
+      { name: "Light Blue", code: "L700", value: "#77B8D2" },
+      { name: "Dark Blue", code: "L710", value: "#247BA2" },
+      { name: "Purple", code: "L720", value: "#816B96" },
+      { name: "White", code: "L800", value: "#F4F1DC" },
+      { name: "Beige", code: "L810", value: "#B4AE9C" },
+    ],
+  },
+  {
+    name: "Compact",
+    colors: [
+      { name: "Black", code: "C111", value: "#222627" },
+      { name: "Light Grey", code: "C213", value: "#D6D4C9" },
+      { name: "Stone", code: "C214", value: "#9C9A91" },
+      { name: "Anthracite", code: "C220", value: "#303738" },
+      { name: "Brown", code: "C350", value: "#544131" },
+      { name: "Cyan", code: "C422", value: "#24A6A0" },
+      { name: "Petrol", code: "C435", value: "#668E83" },
+      { name: "Mint", code: "C450", value: "#B7D7C5" },
+      { name: "Fuchsia", code: "C610", value: "#C00062" },
+      { name: "Rosso", code: "C637", value: "#C20B2E" },
+      { name: "Sky", code: "C700", value: "#83C6DC" },
+      { name: "Atoll", code: "C706", value: "#285999" },
+      { name: "Navy", code: "C711", value: "#172E4F" },
+      { name: "Purple", code: "C715", value: "#82366F" },
+      { name: "White", code: "C811", value: "#F3F0E5" },
+      { name: "Beige", code: "C830", value: "#AA9A7E" },
+    ],
+  },
+  {
+    name: "Electra",
+    colors: [
+      { name: "Black", code: "EL12", value: "#25292A" },
+      { name: "Anthracite", code: "EL13", value: "#4B5051" },
+      { name: "Grey", code: "EL14", value: "#777C7D" },
+    ],
+  },
+];
+
 function ColorEditor({ values, onChange }: ColorEditorProps) {
+  const togglePreset = (preset: ColorPreset) => {
+    const displayName = `${preset.name} ${preset.code}`;
+    const existingIndex = values.findIndex((color) =>
+      color.name.toLocaleLowerCase() === displayName.toLocaleLowerCase() &&
+      color.value.toLocaleLowerCase() === preset.value.toLocaleLowerCase()
+    );
+    if (existingIndex >= 0) {
+      onChange(values.filter((_, index) => index !== existingIndex));
+      return;
+    }
+    onChange([...values, { name: displayName, value: preset.value }]);
+  };
+
   return (
     <div className="admin-bilingual-color-editor admin-single-color-editor">
+      <div className="admin-color-presets">
+        <div className="admin-color-presets-heading">
+          <div><strong>Predefined upholstery palettes</strong><small>Select any colours used by this product. Click a selected colour again to remove it.</small></div>
+          <span>{values.length} selected</span>
+        </div>
+        <div className="admin-color-preset-groups">
+          {colorPresetGroups.map((group, groupIndex) => (
+            <details key={group.name} open={groupIndex === 0 ? true : undefined}>
+              <summary><span>{group.name}</span><small>{group.colors.length} colours</small></summary>
+              <div className="admin-color-preset-grid">
+                {group.colors.map((preset) => {
+                  const displayName = `${preset.name} ${preset.code}`;
+                  const selected = values.some((color) =>
+                    color.name.toLocaleLowerCase() === displayName.toLocaleLowerCase() &&
+                    color.value.toLocaleLowerCase() === preset.value.toLocaleLowerCase()
+                  );
+                  return (
+                    <button
+                      type="button"
+                      className={selected ? "selected" : ""}
+                      aria-pressed={selected}
+                      onClick={() => togglePreset(preset)}
+                      key={preset.code}
+                    >
+                      <span className="admin-color-preset-swatch" style={{ backgroundColor: preset.value }} />
+                      <span><strong>{preset.name}</strong><small>{preset.code} · {preset.value}</small></span>
+                      {selected ? <Check aria-hidden="true" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+      <div className="admin-manual-colors-heading"><strong>Selected &amp; manual colours</strong><small>Edit a selected colour or add any colour not listed above.</small></div>
       {values.map((row, index) => (
         <div className="admin-bilingual-color-row admin-single-color-row" key={index}>
           <input type="color" aria-label={`Color ${index + 1}`} value={row.value} onChange={(event) => onChange(values.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} />
@@ -201,7 +314,7 @@ function ColorEditor({ values, onChange }: ColorEditorProps) {
           <button type="button" aria-label={`Remove ${row.name || "color"}`} onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))}><X aria-hidden="true" /></button>
         </div>
       ))}
-      <button className="admin-add-row" type="button" onClick={() => onChange([...values, { name: "", value: "#6d8198" }])}><Plus aria-hidden="true" /> Add color</button>
+      <button className="admin-add-row" type="button" onClick={() => onChange([...values, { name: "", value: "#6d8198" }])}><Plus aria-hidden="true" /> Add custom color</button>
     </div>
   );
 }
@@ -421,6 +534,14 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
                 <div className="admin-field-section">
                   <div className="admin-section-label"><h3>Color chart</h3><p>Optional PDF showing the available upholstery or finish colors.</p></div>
                   <UploadField icon={FileText} title="Upload color chart" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.colorChart} maxBytes={MAX_DOCUMENT_BYTES} onFiles={(files) => updateDraft("colorChart", files.slice(0, 1))} />
+                </div>
+                <div className="admin-field-section">
+                  <div className="admin-section-label"><h3>Cleaning guide</h3><p>Optional care and cleaning instructions for this product.</p></div>
+                  <UploadField icon={FileText} title="Upload cleaning guide" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.cleaningGuide} maxBytes={MAX_DOCUMENT_BYTES} onFiles={(files) => updateDraft("cleaningGuide", files.slice(0, 1))} />
+                </div>
+                <div className="admin-field-section">
+                  <div className="admin-section-label"><h3>Compliance &amp; certifications</h3><p>Optional declarations, certificates or compliance documentation.</p></div>
+                  <UploadField icon={FileText} title="Upload compliance &amp; certifications" description="PDF · Maximum 20 MB" accept="application/pdf" files={draft.complianceCertifications} maxBytes={MAX_DOCUMENT_BYTES} onFiles={(files) => updateDraft("complianceCertifications", files.slice(0, 1))} />
                 </div>
               </div>
 
@@ -750,7 +871,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
       }
       if (!draft.images.length) throw new Error("Add at least one product image.");
       draft.images.forEach((asset) => { if (asset.file) validateFileSize(asset.file, MAX_IMAGE_BYTES); });
-      [...draft.brochure, ...draft.technicalSheet, ...draft.colorChart].forEach((asset) => { if (asset.file) validateFileSize(asset.file, MAX_DOCUMENT_BYTES); });
+      [...draft.brochure, ...draft.technicalSheet, ...draft.colorChart, ...draft.cleaningGuide, ...draft.complianceCertifications].forEach((asset) => { if (asset.file) validateFileSize(asset.file, MAX_DOCUMENT_BYTES); });
       draft.video.forEach((asset) => { if (asset.file) validateFileSize(asset.file, MAX_VIDEO_BYTES); });
       const youtubeUrl = draft.youtubeUrl.trim();
       if (youtubeUrl && !getYouTubeVideoId(youtubeUrl)) {
@@ -761,6 +882,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
       const brochureUrls = await uploadAssets(draft.brochure, `products/${slug}/documents`);
       const technicalSheetUrls = await uploadAssets(draft.technicalSheet, `products/${slug}/documents`);
       const colorChartUrls = await uploadAssets(draft.colorChart, `products/${slug}/documents`);
+      const cleaningGuideUrls = await uploadAssets(draft.cleaningGuide, `products/${slug}/documents`);
+      const complianceCertificationsUrls = await uploadAssets(draft.complianceCertifications, `products/${slug}/documents`);
       const videoUrls = youtubeUrl ? [] : await uploadAssets(draft.video, `products/${slug}/video`);
       const videoUrl = youtubeUrl || videoUrls[0] || "";
       if (!imageUrls.length) throw new Error("The product image could not be saved.");
@@ -796,6 +919,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
           brochureUrl: brochureUrls[0] ?? "",
           technicalSheetUrl: technicalSheetUrls[0] ?? "",
           colorChartUrl: colorChartUrls[0] ?? "",
+          cleaningGuideUrl: cleaningGuideUrls[0] ?? "",
+          complianceCertificationsUrl: complianceCertificationsUrls[0] ?? "",
           videoUrl,
           name: englishTranslation.name,
           description: englishTranslation.description,
@@ -830,6 +955,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         brochureUrl: brochureUrls[0] ?? "",
         technicalSheetUrl: technicalSheetUrls[0] ?? "",
         colorChartUrl: colorChartUrls[0] ?? "",
+        cleaningGuideUrl: cleaningGuideUrls[0] ?? "",
+        complianceCertificationsUrl: complianceCertificationsUrls[0] ?? "",
         videoUrl,
         translationStatus: result.translationStatus,
         translationError: result.translationError ?? "",

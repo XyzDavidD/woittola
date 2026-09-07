@@ -127,7 +127,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <div className="product-video-card"><div className="product-video-frame">{youtubeEmbedUrl ? <iframe src={youtubeEmbedUrl} title={`${product.translation.name} ${messages.product.demonstration}`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video controls preload="metadata"><source src={product.videoUrl} /></video>}</div></div>
         </section> : null}
 
-        <ProductInformation productName={product.translation.name} content={product.translation} brochureUrl={product.brochureUrl} technicalSheetUrl={product.technicalSheetUrl} colorChartUrl={product.colorChartUrl} ui={messages.product} />
+        <ProductInformation productName={product.translation.name} content={product.translation} brochureUrl={product.brochureUrl} technicalSheetUrl={product.technicalSheetUrl} colorChartUrl={product.colorChartUrl} cleaningGuideUrl={product.cleaningGuideUrl} complianceCertificationsUrl={product.complianceCertificationsUrl} ui={messages.product} />
       </div>
       <SiteFooter />
     </main>
