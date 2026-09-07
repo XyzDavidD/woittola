@@ -9,6 +9,7 @@ import {
   Check,
   ChevronRight,
   CircleCheck,
+  Copy,
   ExternalLink,
   FileText,
   GripVertical,
@@ -83,11 +84,14 @@ type ProductDraft = {
   categoryId: string;
   brand: string;
   productType: string;
+  finnishNameOverride: string;
+  finnishProductTypeOverride: string;
   description: string;
   applications: string[];
   typicalApplications: string[];
   keyFeatures: string[];
   reasons: string[];
+  standardEquipment: string[];
   colors: ColorOption[];
   specifications: Specification[];
   accessories: string[];
@@ -142,11 +146,14 @@ function createDraft(categories: DashboardCategory[], product?: DashboardProduct
     categoryId: product?.categoryId ?? categories[0]?.id ?? "",
     brand: product?.brand ?? "",
     productType: product?.productType ?? "",
+    finnishNameOverride: product?.finnishNameOverride ?? "",
+    finnishProductTypeOverride: product?.finnishProductTypeOverride ?? "",
     description: translation?.description ?? "",
     applications: product?.applications ?? [],
     typicalApplications: translation?.typicalApplications ?? [],
     keyFeatures: translation?.keyFeatures ?? [],
     reasons: translation?.reasons ?? [],
+    standardEquipment: translation?.standardEquipment ?? [],
     colors: translation?.colors ?? [],
     specifications: translation?.specifications ?? [],
     accessories: translation?.accessories ?? [],
@@ -399,14 +406,24 @@ function UploadField({ icon: Icon, title, description, accept, multiple, files, 
 
 type ProductEditorProps = {
   product?: DashboardProduct;
+  duplicate?: boolean;
   categories: DashboardCategory[];
   onCancel: () => void;
   onSave: (draft: ProductDraft, status: ProductStatus) => Promise<boolean>;
 };
 
-function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorProps) {
+function ProductEditor({ product, duplicate = false, categories, onCancel, onSave }: ProductEditorProps) {
   const [activeStep, setActiveStep] = useState<EditorStep>("details");
-  const [draft, setDraft] = useState<ProductDraft>(() => createDraft(categories, product));
+  const [draft, setDraft] = useState<ProductDraft>(() => {
+    const initialDraft = createDraft(categories, product);
+    if (!duplicate) return initialDraft;
+    return {
+      ...initialDraft,
+      id: undefined,
+      slug: "",
+      name: `${initialDraft.name} copy`,
+    };
+  });
   const [saving, setSaving] = useState(false);
 
   const updateDraft = <Key extends keyof ProductDraft>(key: Key, value: ProductDraft[Key]) => {
@@ -443,20 +460,20 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
         <div>
           <div className="admin-editor-title-row">
             <div>
-              <p>{product ? "Edit product" : "New product"}</p>
+              <p>{duplicate ? "Duplicate product" : product ? "Edit product" : "New product"}</p>
               <h1>{draft.name || "Untitled product"}</h1>
               <small className={missingRequirements.length ? "admin-editor-requirements" : "admin-editor-requirements complete"}>{missingRequirements.length ? `Still required: ${missingRequirements.join(", ")}.` : "Required product information is complete."}</small>
             </div>
           </div>
         </div>
         <div className="admin-editor-actions">
-          {product ? (
+          {product && !duplicate ? (
             <Link href={`/products/${product.slug}`} target="_blank">
               <ExternalLink aria-hidden="true" /> View product
             </Link>
           ) : null}
           <button type="button" className="admin-publish-product" disabled={!canSave || saving} onClick={() => saveProduct("Published")}>
-            <Check aria-hidden="true" /> {saving ? "Saving & translating…" : product ? "Save changes" : "Add product"}
+            <Check aria-hidden="true" /> {saving ? "Saving & translating…" : product && !duplicate ? "Save changes" : "Add product"}
           </button>
         </div>
       </header>
@@ -504,6 +521,14 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
                   <label className="admin-field"><span>Product title *</span><input value={draft.name} placeholder="e.g. MedSeat Pro" onChange={(event) => { updateDraft("name", event.target.value); if (!draft.id) updateDraft("slug", slugify(event.target.value)); }} /></label>
                   <label className="admin-field"><span>Product type <small>Optional</small></span><input value={draft.productType} placeholder="e.g. Electric treatment chair" onChange={(event) => updateDraft("productType", event.target.value)} /></label>
                   <label className="admin-field"><span>Description *</span><textarea rows={6} value={draft.description} placeholder="Describe the product, who it is for and the main value it provides." onChange={(event) => updateDraft("description", event.target.value)} /><small>{draft.description.length} characters</small></label>
+                </section>
+                <section className="admin-product-language-panel admin-product-override-panel">
+                  <div className="admin-product-language-heading"><span>FI</span><div><h3>Manual Finnish overrides</h3><p>Optional. Leave empty to use the automatic Gemini translation.</p></div></div>
+                  <div className="admin-form-grid">
+                    <label className="admin-field"><span>Finnish product title <small>Optional override</small></span><input value={draft.finnishNameOverride} placeholder="Use automatic Finnish title" onChange={(event) => updateDraft("finnishNameOverride", event.target.value)} /></label>
+                    <label className="admin-field"><span>Finnish product type <small>Optional override</small></span><input value={draft.finnishProductTypeOverride} placeholder="Use automatic Finnish product type" onChange={(event) => updateDraft("finnishProductTypeOverride", event.target.value)} /></label>
+                  </div>
+                  <small>These exact values are preserved during every save and translation retry.</small>
                 </section>
               </div>
 
@@ -600,6 +625,11 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
               </div>
 
               <div className="admin-field-section">
+                <div className="admin-section-label"><h3>Standard equipment</h3><p>Equipment supplied as standard with the product. Displayed in its own product-page tab.</p></div>
+                <ListEditor values={draft.standardEquipment} onChange={(values) => updateDraft("standardEquipment", values)} placeholder="e.g. Push handles" addLabel="Add standard equipment" />
+              </div>
+
+              <div className="admin-field-section">
                 <div className="admin-section-label"><h3>Specifications</h3><p>Use a clear label and value for each technical detail.</p></div>
                 <SpecificationEditor values={draft.specifications} onChange={(values) => updateDraft("specifications", values)} />
               </div>
@@ -621,7 +651,7 @@ function ProductEditor({ product, categories, onCancel, onSave }: ProductEditorP
             {activeStep !== "technical" ? (
               <button type="button" onClick={goToNextStep}>Continue <ChevronRight aria-hidden="true" /></button>
             ) : (
-              <button type="button" disabled={!canSave || saving} onClick={() => saveProduct("Published")}><Check aria-hidden="true" /> {saving ? "Saving & translating…" : product ? "Save changes" : "Add product"}</button>
+              <button type="button" disabled={!canSave || saving} onClick={() => saveProduct("Published")}><Check aria-hidden="true" /> {saving ? "Saving & translating…" : product && !duplicate ? "Save changes" : "Add product"}</button>
             )}
           </div>
         </div>
@@ -835,6 +865,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All categories");
   const [editingProduct, setEditingProduct] = useState<DashboardProduct | null | undefined>(undefined);
+  const [duplicatingProduct, setDuplicatingProduct] = useState(false);
   const [editingCategory, setEditingCategory] = useState<DashboardCategory | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<DashboardProduct | null>(null);
   const [toast, setToast] = useState("");
@@ -898,6 +929,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         typicalApplications: cleanList(draft.typicalApplications),
         keyFeatures: cleanList(draft.keyFeatures),
         reasons: cleanList(draft.reasons),
+        standardEquipment: cleanList(draft.standardEquipment),
         colors: draft.colors.filter((color) => color.name.trim()),
         specifications: draft.specifications.filter((item) => item.label.trim() && item.value.trim()),
         accessories: cleanList(draft.accessories),
@@ -912,6 +944,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
           slug,
           brand: draft.brand.trim(),
           productType: draft.productType.trim(),
+          finnishNameOverride: draft.finnishNameOverride.trim(),
+          finnishProductTypeOverride: draft.finnishProductTypeOverride.trim(),
           applications,
           status: status.toLowerCase(),
           primaryImageUrl: imageUrls[0],
@@ -929,6 +963,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
           typicalApplications: englishTranslation.typicalApplications,
           keyFeatures: englishTranslation.keyFeatures,
           reasons: englishTranslation.reasons,
+          standardEquipment: englishTranslation.standardEquipment,
           colors: englishTranslation.colors,
           specifications: englishTranslation.specifications,
           accessories: englishTranslation.accessories,
@@ -946,6 +981,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         slug: savedSlug,
         brand: draft.brand.trim(),
         productType: draft.productType.trim(),
+        finnishNameOverride: draft.finnishNameOverride.trim(),
+        finnishProductTypeOverride: draft.finnishProductTypeOverride.trim(),
         applications,
         status: status === "Published" ? "published" : "draft",
         featured: existing?.featured ?? false,
@@ -973,6 +1010,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
         ? current.map((product) => product.id === result.entityId ? nextProduct : product)
         : [nextProduct, ...current]);
       setEditingProduct(undefined);
+      setDuplicatingProduct(false);
       showToast(result.translationStatus === "ready"
         ? draft.id ? "Product saved and Finnish updated" : "Product saved with Finnish translation"
         : `English saved. Finnish translation failed: ${result.translationError || "Please retry."}`);
@@ -1113,7 +1151,13 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
   if (editingProduct !== undefined) {
     return (
       <main className="admin-dashboard">
-        <ProductEditor product={editingProduct ?? undefined} categories={categories} onCancel={() => setEditingProduct(undefined)} onSave={handleSaveProduct} />
+        <ProductEditor
+          product={editingProduct ?? undefined}
+          duplicate={duplicatingProduct}
+          categories={categories}
+          onCancel={() => { setEditingProduct(undefined); setDuplicatingProduct(false); }}
+          onSave={handleSaveProduct}
+        />
         {toast ? <div className="admin-toast"><CircleCheck aria-hidden="true" /> {toast}</div> : null}
       </main>
     );
@@ -1162,7 +1206,7 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
                     <label className="admin-search"><Search aria-hidden="true" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products..." /><kbd>⌘ K</kbd></label>
                     <label className="admin-filter"><span className="sr-only">Filter by category</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option>All categories</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</select></label>
                   </div>
-                  <button className="admin-inline-add-product" type="button" onClick={() => setEditingProduct(null)}><Plus aria-hidden="true" /> Add new product</button>
+                  <button className="admin-inline-add-product" type="button" onClick={() => { setDuplicatingProduct(false); setEditingProduct(null); }}><Plus aria-hidden="true" /> Add new product</button>
                 </div>
               </div>
 
@@ -1188,7 +1232,8 @@ export default function Dashboard({ initialCategories, initialProducts, initialP
                       </span>
                       <span className="admin-updated">{product.updated}</span>
                       <div className="admin-row-actions">
-                        <button type="button" aria-label={`Edit ${product.name}`} onClick={() => setEditingProduct(product)}><Pencil aria-hidden="true" /></button>
+                        <button type="button" title="Duplicate product" aria-label={`Duplicate ${product.name}`} onClick={() => { setDuplicatingProduct(true); setEditingProduct(product); }}><Copy aria-hidden="true" /></button>
+                        <button type="button" title="Edit product" aria-label={`Edit ${product.name}`} onClick={() => { setDuplicatingProduct(false); setEditingProduct(product); }}><Pencil aria-hidden="true" /></button>
                         <Link href={`/products/${product.slug}`} target="_blank" aria-label={`View ${product.name}`}><ExternalLink aria-hidden="true" /></Link>
                         <button className="danger" type="button" aria-label={`Delete ${product.name}`} onClick={() => setDeleteProduct(product)}><Trash2 aria-hidden="true" /></button>
                       </div>

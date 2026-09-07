@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronDown, Menu } from "lucide-react";
 import { productCategories } from "../data/catalogue";
 import { getLocaleMessages } from "../locales/server";
+import { getPublicCategoryNavigation } from "@/lib/catalogue/queries";
 import LanguageSelector from "./LanguageSelector";
 
 type ActivePage = "home" | "products" | "references" | "about" | "partners";
@@ -13,6 +14,10 @@ type SiteHeaderProps = {
 
 export default async function SiteHeader({ activePage }: SiteHeaderProps) {
   const { locale, messages } = await getLocaleMessages();
+  const managedCategories = await getPublicCategoryNavigation(locale);
+  const managedNames = new Map(managedCategories.map((category) => [category.slug, category.name]));
+  const categoryName = (slug: (typeof productCategories)[number]["slug"]) =>
+    managedNames.get(slug) || messages.categoryNames[slug];
   const navigation: Array<{ label: string; href: string; key: ActivePage }> = [
     { label: messages.header.home, href: "/", key: "home" },
     { label: messages.header.references, href: "/references", key: "references" },
@@ -51,7 +56,7 @@ export default async function SiteHeader({ activePage }: SiteHeaderProps) {
               <div>
                 {productCategories.map((category) => (
                   <Link href={`/catalogue/${category.slug}`} key={category.slug}>
-                    {messages.categoryNames[category.slug]}
+                    {categoryName(category.slug)}
                   </Link>
                 ))}
               </div>
@@ -88,7 +93,7 @@ export default async function SiteHeader({ activePage }: SiteHeaderProps) {
               <div className="mobile-products-dropdown">
                 {productCategories.map((category) => (
                   <Link href={`/catalogue/${category.slug}`} key={category.slug}>
-                    {messages.categoryNames[category.slug]}
+                    {categoryName(category.slug)}
                   </Link>
                 ))}
               </div>

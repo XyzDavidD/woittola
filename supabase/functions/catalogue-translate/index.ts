@@ -28,6 +28,7 @@ type ProductSource = {
   typicalApplications: string[];
   keyFeatures: string[];
   reasons: string[];
+  standardEquipment: string[];
   colors: Array<{ name: string; value: string }>;
   specifications: Array<{ label: string; value: string }>;
   accessories: string[];
@@ -36,6 +37,8 @@ type ProductSource = {
 type ProductTranslationContext = {
   source: ProductSource;
   brand: string;
+  finnishNameOverride: string;
+  finnishProductTypeOverride: string;
 };
 
 type PartnerSource = {
@@ -100,6 +103,7 @@ const productSchema = {
     typicalApplications: { type: "array", items: { type: "string" } },
     keyFeatures: { type: "array", items: { type: "string" } },
     reasons: { type: "array", items: { type: "string" } },
+    standardEquipment: { type: "array", items: { type: "string" } },
     colors: {
       type: "array",
       items: {
@@ -131,6 +135,7 @@ const productSchema = {
     "typicalApplications",
     "keyFeatures",
     "reasons",
+    "standardEquipment",
     "colors",
     "specifications",
     "accessories",
@@ -524,6 +529,7 @@ function validateProductTranslation(value: unknown, source: ProductSource, brand
     typicalApplications: requireStringArray(item.typicalApplications, "typicalApplications", source.typicalApplications.length),
     keyFeatures: requireStringArray(item.keyFeatures, "keyFeatures", source.keyFeatures.length),
     reasons: requireStringArray(item.reasons, "reasons", source.reasons.length),
+    standardEquipment: requireStringArray(item.standardEquipment, "standardEquipment", source.standardEquipment.length),
     colors,
     specifications,
     accessories: requireStringArray(item.accessories, "accessories", source.accessories.length),
@@ -537,6 +543,7 @@ function validateProductTranslation(value: unknown, source: ProductSource, brand
     "typicalApplications",
     "keyFeatures",
     "reasons",
+    "standardEquipment",
     "accessories",
   ] as const;
   listFields.forEach((field) => {
@@ -629,15 +636,17 @@ async function readProductSource(admin: ReturnType<typeof createClient>, entityI
   const [{ data, error }, { data: product, error: productError }] = await Promise.all([
     admin
     .from("product_translations")
-    .select("name, description, product_type_label, application_labels, typical_applications, key_features, reasons, colors, specifications, accessories")
+    .select("name, description, product_type_label, application_labels, typical_applications, key_features, reasons, standard_equipment, colors, specifications, accessories")
     .eq("product_id", entityId)
     .eq("locale", "en")
     .single(),
-    admin.from("products").select("brand").eq("id", entityId).single(),
+    admin.from("products").select("brand, finnish_name_override, finnish_product_type_override").eq("id", entityId).single(),
   ]);
   if (error || productError || !data || !product) throw new Error("The English product content could not be found.");
   return {
     brand: product.brand ?? "",
+    finnishNameOverride: product.finnish_name_override ?? "",
+    finnishProductTypeOverride: product.finnish_product_type_override ?? "",
     source: {
       name: data.name,
       description: data.description,
@@ -646,6 +655,7 @@ async function readProductSource(admin: ReturnType<typeof createClient>, entityI
       typicalApplications: data.typical_applications ?? [],
       keyFeatures: data.key_features ?? [],
       reasons: data.reasons ?? [],
+      standardEquipment: data.standard_equipment ?? [],
       colors: data.colors ?? [],
       specifications: data.specifications ?? [],
       accessories: data.accessories ?? [],
@@ -764,6 +774,29 @@ Deno.serve(async (request) => {
       entityId = savedId;
       if (body.entityType === "product") {
         const productData = body.data as Record<string, unknown>;
+        const finnishNameOverride = productData.finnishNameOverride;
+        const finnishProductTypeOverride = productData.finnishProductTypeOverride;
+        if (finnishNameOverride !== undefined && typeof finnishNameOverride !== "string") {
+          throw new Error("The Finnish product title override is invalid.");
+        }
+        if (finnishProductTypeOverride !== undefined && typeof finnishProductTypeOverride !== "string") {
+          throw new Error("The Finnish product type override is invalid.");
+        }
+        const standardEquipment = productData.standardEquipment;
+        if (standardEquipment !== undefined && (!Array.isArray(standardEquipment) || standardEquipment.some((item) => typeof item !== "string"))) {
+          throw new Error("The standard equipment list is invalid.");
+        }
+        if (Array.isArray(standardEquipment)) {
+          const cleanedStandardEquipment = standardEquipment
+            .map((item) => (item as string).trim())
+            .filter(Boolean);
+          const { error: standardEquipmentError } = await admin
+            .from("product_translations")
+            .update({ standard_equipment: cleanedStandardEquipment })
+            .eq("product_id", entityId)
+            .eq("locale", "en");
+          if (standardEquipmentError) throw standardEquipmentError;
+        }
         const colorChartUrl = productData.colorChartUrl;
         const cleaningGuideUrl = productData.cleaningGuideUrl;
         const complianceCertificationsUrl = productData.complianceCertificationsUrl;
@@ -777,16 +810,18 @@ Deno.serve(async (request) => {
             throw new Error(`The ${label} URL is invalid.`);
           }
         }
-        const documentUpdate: Record<string, string | null> = {};
-        if (typeof colorChartUrl === "string") documentUpdate.color_chart_url = colorChartUrl.trim() || null;
-        if (typeof cleaningGuideUrl === "string") documentUpdate.cleaning_guide_url = cleaningGuideUrl.trim() || null;
+        const productMetadataUpdate: Record<string, string | null> = {};
+        if (typeof finnishNameOverride === "string") productMetadataUpdate.finnish_name_override = finnishNameOverride.trim() || null;
+        if (typeof finnishProductTypeOverride === "string") productMetadataUpdate.finnish_product_type_override = finnishProductTypeOverride.trim() || null;
+        if (typeof colorChartUrl === "string") productMetadataUpdate.color_chart_url = colorChartUrl.trim() || null;
+        if (typeof cleaningGuideUrl === "string") productMetadataUpdate.cleaning_guide_url = cleaningGuideUrl.trim() || null;
         if (typeof complianceCertificationsUrl === "string") {
-          documentUpdate.compliance_certifications_url = complianceCertificationsUrl.trim() || null;
+          productMetadataUpdate.compliance_certifications_url = complianceCertificationsUrl.trim() || null;
         }
-        if (Object.keys(documentUpdate).length > 0) {
+        if (Object.keys(productMetadataUpdate).length > 0) {
           const { error: documentError } = await admin
             .from("products")
-            .update(documentUpdate)
+            .update(productMetadataUpdate)
             .eq("id", entityId);
           if (documentError) throw documentError;
         }
@@ -852,7 +887,7 @@ Deno.serve(async (request) => {
         }, { onConflict: "partner_id,locale" });
         if (error) throw error;
       } else if (body.entityType === "product") {
-        const { source, brand } = await readProductSource(admin, entityId);
+        const { source, brand, finnishNameOverride, finnishProductTypeOverride } = await readProductSource(admin, entityId);
         const translatableSource = {
           ...source,
           colors: source.colors.map(({ name }) => ({ name })),
@@ -865,13 +900,14 @@ Deno.serve(async (request) => {
         const { error } = await admin.from("product_translations").upsert({
           product_id: entityId,
           locale: "fi",
-          name: translated.name,
+          name: finnishNameOverride.trim() || translated.name,
           description: translated.description,
-          product_type_label: translated.productTypeLabel,
+          product_type_label: finnishProductTypeOverride.trim() || translated.productTypeLabel,
           application_labels: translated.applicationLabels,
           typical_applications: translated.typicalApplications,
           key_features: translated.keyFeatures,
           reasons: translated.reasons,
+          standard_equipment: translated.standardEquipment,
           colors: translated.colors,
           specifications: translated.specifications,
           accessories: translated.accessories,

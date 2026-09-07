@@ -18,6 +18,33 @@ type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+function ProductDescription({ description }: { description: string }) {
+  const blocks = description
+    .trim()
+    .split(/\r?\n\s*\r?\n/)
+    .map((block) => block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))
+    .filter((block) => block.length > 0);
+
+  return (
+    <div className="product-detail-description">
+      {blocks.map((lines, blockIndex) => {
+        const isUnorderedList = lines.every((line) => /^[-*•]\s+/.test(line));
+        const isOrderedList = lines.every((line) => /^\d+[.)]\s+/.test(line));
+
+        if (isUnorderedList) {
+          return <ul key={blockIndex}>{lines.map((line, lineIndex) => <li key={lineIndex}>{line.replace(/^[-*•]\s+/, "")}</li>)}</ul>;
+        }
+
+        if (isOrderedList) {
+          return <ol key={blockIndex}>{lines.map((line, lineIndex) => <li key={lineIndex}>{line.replace(/^\d+[.)]\s+/, "")}</li>)}</ol>;
+        }
+
+        return <p key={blockIndex}>{lines.map((line, lineIndex) => <span key={lineIndex}>{line}{lineIndex < lines.length - 1 ? <br /> : null}</span>)}</p>;
+      })}
+    </div>
+  );
+}
+
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
@@ -106,7 +133,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             {product.brand ? <p className="product-detail-brand">{product.brand}</p> : null}
             <h1 id="product-detail-title">{product.translation.name}</h1>
             {product.translation.productTypeLabel || product.productType ? <p className="product-detail-type">{product.translation.productTypeLabel || product.productType}</p> : null}
-            <p className="product-detail-description">{product.translation.description}</p>
+            <ProductDescription description={product.translation.description} />
 
             {product.applications.length ? <div className="product-detail-applications">
               <h2>{messages.product.applications}</h2>

@@ -20,7 +20,7 @@ import { CONTACT_EMAIL_HREF } from "@/lib/site";
 import type { DeepTranslated, Messages } from "../../locales";
 import { interpolate } from "../../locales";
 
-const tabs = ["overview", "specifications", "accessories", "downloads"] as const;
+const tabs = ["overview", "standardEquipment", "specifications", "accessories", "downloads"] as const;
 type TabName = (typeof tabs)[number];
 
 const featureIcons = [UsersRound, Activity, Sparkles, ShieldCheck, BadgeCheck];
@@ -41,6 +41,7 @@ export default function ProductInformation({ productName, content, brochureUrl, 
   const hasOverview = Boolean(content.typicalApplications.length || content.keyFeatures.length || content.reasons.length || content.colors.length);
   const availableTabs = tabs.filter((tab) => {
     if (tab === "overview") return hasOverview;
+    if (tab === "standardEquipment") return content.standardEquipment.length > 0;
     if (tab === "specifications") return content.specifications.length > 0;
     if (tab === "accessories") return content.accessories.length > 0;
     if (tab === "downloads") return Boolean(brochureUrl || technicalSheetUrl || colorChartUrl || cleaningGuideUrl || complianceCertificationsUrl);
@@ -90,6 +91,11 @@ export default function ProductInformation({ productName, content, brochureUrl, 
             </div>
           </div>
         ) : null}
+
+        {displayedTab === "standardEquipment" ? <article className="product-secondary-tab-card">
+          <div className="product-secondary-tab-heading"><ClipboardCheck aria-hidden="true" /><div><h2>{ui.standardEquipment}</h2><p>{interpolate(ui.standardEquipmentCopy, { product: productName })}</p></div></div>
+          <div className="product-accessory-grid">{content.standardEquipment.map((item) => <div key={item}><Check aria-hidden="true" /><span>{item}</span></div>)}</div>
+        </article> : null}
 
         {displayedTab === "specifications" ? <article className="product-secondary-tab-card">
           <div className="product-secondary-tab-heading"><Activity aria-hidden="true" /><div><h2>{ui.technicalSpecifications}</h2><p>{interpolate(ui.technicalCopy, { product: productName })}</p></div></div>

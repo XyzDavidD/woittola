@@ -1979,6 +1979,30 @@ summary {
   line-height: 1.7;
 }
 
+.product-detail-description p {
+  margin: 0;
+}
+
+.product-detail-description p + p,
+.product-detail-description p + ul,
+.product-detail-description p + ol,
+.product-detail-description ul + p,
+.product-detail-description ol + p,
+.product-detail-description ul + ul,
+.product-detail-description ol + ol {
+  margin-top: 1em;
+}
+
+.product-detail-description ul,
+.product-detail-description ol {
+  margin-bottom: 0;
+  padding-left: 1.35em;
+}
+
+.product-detail-description li + li {
+  margin-top: 0.22em;
+}
+
 .product-detail-applications {
   margin-top: 41px;
 }

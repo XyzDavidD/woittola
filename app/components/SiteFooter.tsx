@@ -4,9 +4,14 @@ import { ArrowUpRight, Mail } from "lucide-react";
 import { CONTACT_EMAIL, CONTACT_EMAIL_HREF } from "@/lib/site";
 import { productCategories } from "../data/catalogue";
 import { getLocaleMessages } from "../locales/server";
+import { getPublicCategoryNavigation } from "@/lib/catalogue/queries";
 
 export default async function SiteFooter() {
-  const { messages } = await getLocaleMessages();
+  const { locale, messages } = await getLocaleMessages();
+  const managedCategories = await getPublicCategoryNavigation(locale);
+  const managedNames = new Map(managedCategories.map((category) => [category.slug, category.name]));
+  const categoryName = (slug: (typeof productCategories)[number]["slug"]) =>
+    managedNames.get(slug) || messages.categoryNames[slug];
   const t = messages.footer;
 
   return (
@@ -36,7 +41,7 @@ export default async function SiteFooter() {
             <h2>{t.productCategories}</h2>
             {productCategories.map((category) => (
               <Link href={`/catalogue/${category.slug}`} key={category.slug}>
-                {messages.categoryNames[category.slug]}
+                {categoryName(category.slug)}
               </Link>
             ))}
           </nav>

@@ -47,6 +47,7 @@ export type ProductTranslation = {
   typicalApplications: string[];
   keyFeatures: string[];
   reasons: string[];
+  standardEquipment: string[];
   colors: ColorOption[];
   specifications: Specification[];
   accessories: string[];
@@ -60,6 +61,8 @@ export type CatalogueProduct = {
   slug: string;
   brand: string;
   productType: string;
+  finnishNameOverride: string;
+  finnishProductTypeOverride: string;
   applications: string[];
   status: CatalogueStatus;
   featured: boolean;

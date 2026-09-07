@@ -59,6 +59,8 @@ try {
   productSlug = `translation-test-${unique}`;
   const englishName = `Woittola Translation workflow test ${unique}`;
   const englishDescription = "A temporary clinical product used to verify automatic Finnish translation. Maximum load 120 kg.";
+  const finnishNameOverride = `Woittola manuaalinen testituote ${unique}`;
+  const finnishProductTypeOverride = "Manuaalinen testituotetyyppi";
   let { data: result, error: invokeError } = await supabase.functions.invoke("catalogue-translate", {
     body: {
       action: "save",
@@ -68,6 +70,8 @@ try {
         slug: productSlug,
         brand: "Woittola",
         productType: "test-product",
+        finnishNameOverride,
+        finnishProductTypeOverride,
         applications: ["Clinical testing"],
         status: "draft",
         primaryImageUrl: "/images/hero-products.png",
@@ -83,6 +87,7 @@ try {
         typicalApplications: ["Translation quality assurance"],
         keyFeatures: ["Maximum load 120 kg"],
         reasons: ["Verifies Finnish catalogue content"],
+        standardEquipment: ["Integrated IV pole", "Four 125 mm swivel castors"],
         colors: [{ name: "Deep blue", value: "#123456" }],
         specifications: [
           { label: "Maximum load", value: "120 kg" },
@@ -129,7 +134,7 @@ try {
 
   const [{ data: product, error: productError }, { data: translations, error: translationsError }] = await Promise.all([
     supabase.from("products").select("translation_status, translation_error").eq("id", productId).single(),
-    supabase.from("product_translations").select("locale, name, description, colors, specifications").eq("product_id", productId),
+    supabase.from("product_translations").select("locale, name, description, product_type_label, standard_equipment, colors, specifications").eq("product_id", productId),
   ]);
   if (productError || translationsError) throw new Error(productError?.message || translationsError?.message);
   const english = translations?.find((translation) => translation.locale === "en");
@@ -143,11 +148,16 @@ try {
   if (!finnish.name?.trim() || !finnish.description?.trim()) {
     throw new Error("The Finnish product content is empty.");
   }
+  if (finnish.name !== finnishNameOverride || finnish.product_type_label !== finnishProductTypeOverride) {
+    throw new Error("The manual Finnish product title or product type override was not preserved.");
+  }
   if (!finnish.name.includes("Woittola")) {
     throw new Error("The protected brand name changed inside the translated product title.");
   }
   if (
     finnish.colors?.[0]?.value !== "#123456" ||
+    finnish.standard_equipment?.length !== 2 ||
+    !finnish.standard_equipment?.[1]?.includes("125 mm") ||
     finnish.specifications?.[0]?.value !== "120 kg" ||
     !finnish.specifications?.[1]?.value?.includes("125 mm") ||
     !finnish.specifications?.[1]?.value?.includes("1")

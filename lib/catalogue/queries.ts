@@ -27,6 +27,7 @@ type TranslationRow = {
   typical_applications?: string[];
   key_features?: string[];
   reasons?: string[];
+  standard_equipment?: string[];
   colors?: ColorOption[];
   specifications?: Specification[];
   accessories?: string[];
@@ -55,6 +56,8 @@ type ProductRow = {
   slug: string;
   brand: string;
   product_type: string;
+  finnish_name_override: string | null;
+  finnish_product_type_override: string | null;
   applications: string[];
   status: "draft" | "published";
   featured: boolean;
@@ -102,6 +105,8 @@ const adminCategorySelect = `
     slug,
     brand,
     product_type,
+    finnish_name_override,
+    finnish_product_type_override,
     applications,
     status,
     featured,
@@ -128,6 +133,7 @@ const adminCategorySelect = `
       typical_applications,
       key_features,
       reasons,
+      standard_equipment,
       colors,
       specifications,
       accessories
@@ -159,6 +165,8 @@ const publicCategorySelect = `
     slug,
     brand,
     product_type,
+    finnish_name_override,
+    finnish_product_type_override,
     applications,
     status,
     featured,
@@ -182,6 +190,7 @@ const publicCategorySelect = `
       typical_applications,
       key_features,
       reasons,
+      standard_equipment,
       colors,
       specifications,
       accessories
@@ -210,6 +219,7 @@ function mapProductTranslation(row: TranslationRow): ProductTranslation {
     typicalApplications: row.typical_applications ?? [],
     keyFeatures: row.key_features ?? [],
     reasons: row.reasons ?? [],
+    standardEquipment: row.standard_equipment ?? [],
     colors: row.colors ?? [],
     specifications: row.specifications ?? [],
     accessories: row.accessories ?? [],
@@ -248,6 +258,8 @@ function mapProduct(row: ProductRow, category: CatalogueCategory): CatalogueProd
     slug: row.slug,
     brand: row.brand,
     productType: row.product_type,
+    finnishNameOverride: row.finnish_name_override ?? "",
+    finnishProductTypeOverride: row.finnish_product_type_override ?? "",
     applications: row.applications ?? [],
     status: row.status,
     featured: row.featured,
@@ -270,13 +282,33 @@ function mapProduct(row: ProductRow, category: CatalogueCategory): CatalogueProd
 }
 
 function localizedCategory(category: CatalogueCategory, locale: CatalogueLocale) {
-  if (locale === "fi" && category.translationStatus !== "ready") return category.translations.en;
-  return category.translations[locale] ?? category.translations.en;
+  const fallback = category.translations.en;
+  const translation = locale === "fi" && category.translationStatus !== "ready"
+    ? fallback
+    : category.translations[locale] ?? fallback;
+  if (!translation) return undefined;
+
+  // The administrator's manual Finnish name is authoritative everywhere,
+  // including while Gemini is processing or has temporarily failed.
+  if (locale === "fi" && category.finnishNameOverride.trim()) {
+    return { ...translation, locale: "fi" as const, name: category.finnishNameOverride.trim() };
+  }
+  return translation;
 }
 
 function localizedProduct(product: CatalogueProduct, locale: CatalogueLocale) {
-  if (locale === "fi" && product.translationStatus !== "ready") return product.translations.en;
-  return product.translations[locale] ?? product.translations.en;
+  const fallback = product.translations.en;
+  const translation = locale === "fi" && product.translationStatus !== "ready"
+    ? fallback
+    : product.translations[locale] ?? fallback;
+  if (!translation) return undefined;
+  if (locale !== "fi") return translation;
+  return {
+    ...translation,
+    locale: "fi" as const,
+    name: product.finnishNameOverride.trim() || translation.name,
+    productTypeLabel: product.finnishProductTypeOverride.trim() || translation.productTypeLabel,
+  };
 }
 
 export async function getAdminCatalogueData(client: SupabaseClient): Promise<AdminCatalogueData> {
@@ -324,6 +356,30 @@ export async function getPublicCategories(locale: CatalogueLocale = "en"): Promi
     });
 
     return [{ ...category, translation, products }];
+  });
+}
+
+export async function getPublicCategoryNavigation(locale: CatalogueLocale = "en") {
+  const client = createPublicClient();
+  const { data, error } = await client
+    .from("categories")
+    .select("slug, finnish_name_override, translation_status, category_translations(locale, name)")
+    .eq("is_published", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) return [];
+
+  return (data ?? []).flatMap((row) => {
+    const translations = Array.isArray(row.category_translations)
+      ? row.category_translations as Array<{ locale: CatalogueLocale; name: string }>
+      : [];
+    const englishName = translations.find((translation) => translation.locale === "en")?.name;
+    const translatedName = translations.find((translation) => translation.locale === locale)?.name;
+    const override = locale === "fi" && typeof row.finnish_name_override === "string"
+      ? row.finnish_name_override.trim()
+      : "";
+    const name = override || translatedName || englishName;
+    return name ? [{ slug: row.slug, name }] : [];
   });
 }
 
