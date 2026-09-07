@@ -2554,7 +2554,7 @@ summary {
 }
 
 .product-key-features {
-  margin-top: auto;
+  margin-top: 40px;
   padding: 17px 16px 15px;
   border: 1px solid #dfe5eb;
   border-radius: 8px;
@@ -4116,7 +4116,7 @@ summary {
   }
 
   .product-key-features {
-    margin-top: 28px;
+    margin-top: 36px;
   }
 
   .product-help-banner {
